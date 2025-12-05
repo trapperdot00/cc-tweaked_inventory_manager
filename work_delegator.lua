@@ -29,7 +29,7 @@ local function print_inputs(inputs)
 end
 
 local function print_help()
-    print("usage: <program> [options]")
+    print("usage: " .. arg[0] .. " [options]")
     print("options: --sort --pull")
     print("         --get-items=<item1>[,<itemN>]...")
     print("         --print-rows --print-items --print-inputs")

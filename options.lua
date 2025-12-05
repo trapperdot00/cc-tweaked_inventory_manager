@@ -1,8 +1,8 @@
 local str     = require("string_utils")
 local options = {}
 
-function options.parse(args)
-    local self = {
+function options.parse()
+    local opts = {
         sort            = false,
         pull            = false,
         get_items       = {},
@@ -10,25 +10,24 @@ function options.parse(args)
         print_items     = false,
         print_inputs    = false
     }
-    setmetatable(self, options)
-    for i = 1, #args do
-        local arg = args[i]
-        if arg == "--sort" then
-            self["sort"] = true
-        elseif arg == "--pull" then
-            self["pull"] = true
-        elseif arg:find("--get-items", 1, true) then
-            local equal_pos = arg:find('=', 1, true) + 1
-            self["get_items"] = str.split(arg:sub(equal_pos), ',')
-        elseif arg == "--print-rows" then
-            self["print_rows"] = true
-        elseif arg == "--print-items" then
-            self["print_items"] = true
-        elseif arg == "--print-inputs" then
-            self["print_inputs"] = true
+    for i = 1, #arg do
+        local curr_arg = arg[i]
+        if curr_arg == "--sort" then
+            opts["sort"] = true
+        elseif curr_arg == "--pull" then
+            opts["pull"] = true
+        elseif curr_arg:find("--get-items", 1, true) then
+            local equal_pos = curr_arg:find('=', 1, true) + 1
+            opts["get_items"] = str.split(curr_arg:sub(equal_pos), ',')
+        elseif curr_arg == "--print-rows" then
+            opts["print_rows"] = true
+        elseif curr_arg == "--print-items" then
+            opts["print_items"] = true
+        elseif curr_arg == "--print-inputs" then
+            opts["print_inputs"] = true
         end
     end
-    return self
+    return opts
 end
 
 return options

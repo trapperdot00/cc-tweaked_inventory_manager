@@ -2,8 +2,6 @@ local cfg       = require("config_reader")
 local options   = require("options")
 local wd        = require("work_delegator")
 
-local args = { ... }
-
 local function main()
     -- Have to update this to the current working directory
     local pwd = "/programs/chest/0006/"
@@ -19,7 +17,7 @@ local function main()
     local inputs    = cfg.read_config_file_seque(inputs_file)
 
     -- Command-line arguments
-    local opts      = options.parse(args)
+    local opts      = options.parse()
     
     -- Select appropriate work for command-line arguments
     wd.delegate(opts, rows, items, inputs)
