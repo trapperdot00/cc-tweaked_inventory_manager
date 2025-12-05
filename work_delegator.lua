@@ -1,4 +1,5 @@
 local sorter            = require("sorter")
+local debugger          = require("debugger")
 local work_delegator    = {}
 
 local function sort(rows, items, inputs)
