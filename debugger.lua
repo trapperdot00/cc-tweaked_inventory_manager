@@ -1,5 +1,13 @@
 local debugger = {}
 
+-- Print an ordinary non-nested table
+function debugger.print_table(tbl)
+	for a, b in pairs(tbl) do
+		print(a, b)
+	end
+	print()
+end
+
 -- Print an associative table
 function debugger.print_assoc(cfg)
     for i, tbl in pairs(cfg) do
