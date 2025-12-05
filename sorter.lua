@@ -68,9 +68,9 @@ function sorter.get_item(rows, items, inputs, target_item)
             for _, chest in ipairs(chests) do
                 local output_chest = peripheral.wrap(chest)
                 for slot, item in pairs(output_chest.list()) do
-					if item.name == target_item then
-						input_chest.pullItems(chest, slot)
-					end
+                    if item.name == target_item then
+                        input_chest.pullItems(chest, slot)
+                    end
                 end
             end
         end
