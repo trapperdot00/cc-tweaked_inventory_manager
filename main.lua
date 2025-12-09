@@ -2,11 +2,12 @@ local cfg       = require("config_reader")
 local options   = require("options")
 local wd        = require("work_delegator")
 local chests    = require("chest_parser")
+local Inventory = require("Inventory")
 
 local function main()
     -- Update this to the current working directory:
-    local pwd        = "./"
-    -- local pwd        = "/chest/"
+    -- local pwd        = "./"
+    local pwd        = "/chest/"
 
     -- Configuration files
     local chest_contents_file = pwd .. "items.data"
@@ -16,24 +17,18 @@ local function main()
     local row_items_file      = pwd .. "row_items.txt"
 
     -- Configuration tables
+    local input_chests = cfg.read_config_file_seque(input_chests_file)
+    -- Deprecating... :
     local rows         = cfg.read_config_file_assoc(row_chests_file)
     local items        = cfg.read_config_file_assoc(row_items_file)
-    local input_chests = cfg.read_config_file_seque(input_chests_file)
 
     -- Command-line arguments
     local opts      = options.parse()
     
-    local chest_contents
-    local file = io.open(chest_contents_file)
-    if file then
-        chest_contents = chests.read_from_file(file)
-    else 
-        chest_contents = chests.read_from_chests()
-        chests.write_to_file(chest_contents, chest_contents_file)
-    end
+    local chest_contents = Inventory.new(chest_contents_file)
     
     -- Select appropriate work for command-line arguments
-    wd.delegate(pwd, opts, rows, items, inputs)
+    wd.delegate(pwd, opts, rows, items, input_chests, chest_contents)
 end
 
 main()

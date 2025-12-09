@@ -17,18 +17,16 @@ local function get_items(rows, items, inputs, sought_items)
     end
 end
 
-local function item_count(pwd, sought_items)
-    local contents = chest_parser.read_from_file(pwd .. "items.data")
+local function item_count(pwd, sought_items, contents)
+    contents:load()
     for _, sought_item in pairs(sought_items) do
-        local count = chest_parser.item_count(contents, sought_item)
+        local count = contents:item_count(sought_item)
         print(sought_item, count)
     end
 end
 
-local function refresh_database(pwd)
-    local filename = pwd .. "items.data"
-    local contents = chest_parser.read_from_chests()
-    chest_parser.write_to_file(contents, filename)
+local function refresh_database(contents)
+    contents:update()
 end
 
 local function print_rows(rows)
@@ -51,17 +49,17 @@ local function print_help()
     print("         --print-rows --print-items --print-inputs")
 end
 
-function work_delegator.delegate(pwd, options, rows, items, inputs)
+function work_delegator.delegate(pwd, options, rows, items, inputs, contents)
     if options["sort"] then
         sort(rows, items, inputs)
     elseif options["pull"] then
         pull(rows, items, inputs)
     elseif options["refresh"] then
-        refresh_database(pwd)
+        refresh_database(contents)
     elseif #options["get_items"] > 0 then
         get_items(rows, items, inputs, options["get_items"])
     elseif #options["item_count"] > 0 then
-        item_count(pwd, options["item_count"])
+        item_count(pwd, options["item_count"], contents)
     elseif options["print_rows"] then
         print_rows(rows)
     elseif options["print_items"] then

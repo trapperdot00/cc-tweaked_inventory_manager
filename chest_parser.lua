@@ -21,16 +21,4 @@ function chest_parser.write_to_file(contents, filename)
     file:write(serialized)
 end
 
-function chest_parser.item_count(contents, sought_item)
-	local count = 0
-	for chest_name, content in pairs(contents) do
-		for slot, item in pairs(content) do
-			if item.name == sought_item then
-				count = count + item.count
-			end
-		end
-	end
-	return count
-end
-
 return chest_parser
