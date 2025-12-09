@@ -3,8 +3,9 @@ local chest_parser = require("chest_parser")
 local Inventory = {}
 Inventory.__index = Inventory
 
-function Inventory.new(filename)
+function Inventory.new(inputs, filename)
     local self = setmetatable({}, Inventory)
+    self.inputs   = inputs
     self.filename = filename
     return self
 end
@@ -14,6 +15,7 @@ function Inventory:load()
     local file = io.open(self.filename)
     if file then
         self.contents = chest_parser.read_from_file(file)
+        self:update_inputs()
     else
         self:update()
     end
@@ -21,6 +23,14 @@ end
 
 function Inventory:update()
     self.contents = chest_parser.read_from_chests()
+    chest_parser.write_to_file(self.contents, self.filename)
+end
+
+function Inventory:update_inputs()
+    for _, input_name in ipairs(self.inputs) do
+        local input_chest = peripheral.wrap(input_name)
+        self.contents[input_name] = input_chest.list()
+    end
     chest_parser.write_to_file(self.contents, self.filename)
 end
 
@@ -35,7 +45,5 @@ function Inventory:item_count(sought_item)
     end
     return count
 end
-
-function Inventory:
 
 return Inventory

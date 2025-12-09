@@ -13,11 +13,11 @@ local function main()
     local inputs_file    = pwd .. "inputs.txt"
 
     local options   = cliargs.parse()
-    local inputs    = cfg.read_seque(input_chests_file)
-    local inventory = Inventory.new(chest_contents_file)
+    local inputs    = cfg.read_seque(inputs_file)
+    local inventory = Inventory.new(inputs, inventory_file)
     
     -- Select appropriate work for command-line arguments
-    work.delegate(options, inputs, inventory)
+    work.delegate(options, inventory)
 end
 
 main()
