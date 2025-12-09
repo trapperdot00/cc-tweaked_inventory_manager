@@ -38,7 +38,9 @@ function Inventory:push()
                 if not self:is_input_chest(output_name) and
                 self:has_empty_slot(output_name) then
                     local output = peripheral.wrap(output_name)
-                    output.pullItems(input_name, slot)
+                    if output.pullItems(input_name, slot) > 0 then
+                        break
+                    end
                 end
             end
         end
