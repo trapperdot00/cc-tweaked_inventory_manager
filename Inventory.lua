@@ -31,18 +31,31 @@ end
 
 function Inventory:push()
     self:load()
+
+    local output_names = {}
+    local output_capacities = {}
+    for output_name, contents in pairs(self.contents) do
+        if not self:is_input_chest(output_name) then
+            local occupied = get_table_size(contents.items)
+            local empty    = contents.size - occupied
+            if empty > 0 then
+                table.insert(output_names, output_name)
+                table.insert(output_capacities, empty)
+            end
+        end
+    end
+
+    local output_i = 1
     for _, input_name in ipairs(self.inputs) do
         local input_data = self.contents[input_name]
         for slot, item in pairs(input_data.items) do
-            for output_name, contents in pairs(self.contents) do
-                if not self:is_input_chest(output_name) and
-                self:has_empty_slot(output_name) then
-                    local output = peripheral.wrap(output_name)
-                    if output.pullItems(input_name, slot) > 0 then
-                        break
-                    end
-                end
+            local output = peripheral.wrap(output_names[output_i])
+            output.pullItems(input_name, slot)
+            output_capacities[output_i] = output_capacities[output_i] - 1
+            if output_capacities[output_i] == 0 then
+                output_i = output_i + 1
             end
+            if output_i > #output_names then break end
         end
     end
 end
