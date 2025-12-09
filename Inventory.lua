@@ -32,32 +32,63 @@ end
 function Inventory:push()
     self:load()
 
-    local output_names = {}
-    local output_capacities = {}
-    for output_name, contents in pairs(self.contents) do
-        if not self:is_input_chest(output_name) then
+    -- Pre-calculate viable output chests
+    local dests   = {}
+    local empties = {}
+    for output_id, contents in pairs(self.contents) do
+        if not self:is_input_chest(output_id) then
             local occupied = get_table_size(contents.items)
             local empty    = contents.size - occupied
             if empty > 0 then
-                table.insert(output_names, output_name)
-                table.insert(output_capacities, empty)
+                table.insert(dests, output_id)
+                table.insert(empties, empty)
             end
         end
+    end
+    if #dests == 0 then
+        print("0 empty slots in output chests!")
+        return
+    end
+    print(#dests .. " viable output chests.")
+
+    -- Push items to output chests
+    print("Starting push.")
+    local pushed = 0
+    local dest_i = 1
+    for _, input_id in ipairs(self.inputs) do
+        local input = peripheral.wrap(input_id)
+        local input_data = self.contents[input_id]
+        for slot, item in pairs(input_data.items) do
+            if input.pushItems(dests[dest_i], slot) > 0 then
+                pushed = pushed + 1
+                empties[dest_i] = empties[dest_i] - 1
+                if empties[dest_i] == 0 then
+                    dest_i = dest_i + 1
+                end
+                if dest_i > #dests then
+                    print("No space for remaining items!")
+                    break
+                end
+                output = peripheral.wrap(dests[dest_i])
+            end
+        end
+    end
+    print("Pushed " .. pushed .. " slots.")
+
+    if pushed == 0 then return end
+    local n = dest_i
+    if dest_i > #dests then
+        n = #dests
     end
 
-    local output_i = 1
-    for _, input_name in ipairs(self.inputs) do
-        local input_data = self.contents[input_name]
-        for slot, item in pairs(input_data.items) do
-            local output = peripheral.wrap(output_names[output_i])
-            output.pullItems(input_name, slot)
-            output_capacities[output_i] = output_capacities[output_i] - 1
-            if output_capacities[output_i] == 0 then
-                output_i = output_i + 1
-            end
-            if output_i > #output_names then break end
-        end
+    print("Updating chest database in memory.")
+    for i=1, n do
+        local chest_name = dests[i]
+        self:update_contents(chest_name)
     end
+    
+    print("Commiting changes to file.")
+    chest_parser.write_to_file(self.contents, self.filename)
 end
 
 function Inventory:scan()
@@ -67,11 +98,15 @@ end
 
 function Inventory:scan_inputs()
     for _, chest_name in ipairs(self.inputs) do
-        local chest = peripheral.wrap(chest_name)
-        local chest_data  = { size = chest.size(), items = chest.list() }
-        self.contents[chest_name] = chest_data
+        self:update_contents(chest_name)
     end
     chest_parser.write_to_file(self.contents, self.filename)
+end
+
+function Inventory:update_contents(chest_id)
+    local chest = peripheral.wrap(chest_id)
+    local chest_data = { size = chest.size(), items = chest.list() }
+    self.contents[chest_id] = chest_data
 end
 
 function Inventory:is_input_chest(chest_id)
