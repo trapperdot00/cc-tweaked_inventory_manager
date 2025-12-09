@@ -63,8 +63,8 @@ end
 -- returns: 'four'
 -- remaining contents: ' five'
 function config_reader.read_quoted(file)
-	local starter = config_reader.read_next_nonspace_char(file)
-	if starter ~= '"' then return nil end
+    local starter = config_reader.read_next_nonspace_char(file)
+    if starter ~= '"' then return nil end
     local s = config_reader.read_until_char(file, "\"")
     if file:read(1) ~= "\"" then
         error("expected closing quote")
