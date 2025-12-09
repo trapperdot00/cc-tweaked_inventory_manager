@@ -57,13 +57,14 @@ function config_reader.read_until_char(file, ch)
 end
 
 -- Reads the next quoted string from a file,
--- consuming any preceding characters
+-- skipping any leading whitespace
 --
--- e.g. file: 'one two three "four" five'
+-- e.g. file: '   "four" five'
 -- returns: 'four'
 -- remaining contents: ' five'
 function config_reader.read_quoted(file)
-    if not config_reader.try_discard_up_to_char(file, "\"") then return s end
+	local starter = config_reader.read_next_nonspace_char(file)
+	if starter ~= '"' then return nil end
     local s = config_reader.read_until_char(file, "\"")
     if file:read(1) ~= "\"" then
         error("expected closing quote")
