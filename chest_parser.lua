@@ -5,7 +5,8 @@ function chest_parser.read_from_chests()
 	local contents = {}
 	for _, chest in ipairs(chests) do
 		local chest_name = peripheral.getName(chest)
-		contents[chest_name] = chest.list()
+		local chest_data = { size = chest.size(), items = chest.list() }
+		contents[chest_name] = chest_data
 	end
 	return contents
 end

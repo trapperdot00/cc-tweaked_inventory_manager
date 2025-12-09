@@ -1,28 +1,6 @@
 local debugger          = require("debugger")
 local work_delegator    = {}
 
-local function push(inventory)
-    inventory:load()
-    for _, input_name in ipairs(inventory.inputs) do
-        local chest_data = inventory.contents[input_name]
-        for slot, item in pairs(chest_data) do
-            print(slot, item.name, item.count)
-        end
-    end
-end
-
-local function pull(rows, items, inputs)
-
-end
-
-local function scan(inventory)
-    inventory:update()
-end
-
-local function get(inputs, sought_items)
-
-end
-
 local function item_count(sought_items, inventory)
     inventory:load()
     for _, sought_item in pairs(sought_items) do
@@ -31,8 +9,8 @@ local function item_count(sought_items, inventory)
     end
 end
 
-local function print_inputs(inputs)
-    debugger.print_seque(inputs)
+local function print_inputs(inventory)
+    debugger.print_seque(inventory.inputs)
 end
 
 local function print_help()
@@ -45,15 +23,15 @@ end
 
 function work_delegator.delegate(options, inventory)
     if options.push then
-        push(inventory)
+        inventory:push()
     elseif options.pull then
-        pull(inventory)
+        inventory:pull()
     elseif options.scan then
-        scan(inventory)
+        inventory:scan()
     elseif #options.get > 0 then
-        get(inventory, options.get)
+        inventory:get()
     elseif #options.count > 0 then
-        count(options.count, inventory)
+        inventory:count()
     elseif options.print_inputs then
         print_inputs(inventory)
     else
