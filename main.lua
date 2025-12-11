@@ -17,7 +17,10 @@ local function main()
     local inventory = Inventory.new(inputs, inventory_file)
     
     -- Select appropriate work for command-line arguments
+	local t1 = os.clock()
     work.delegate(options, inventory)
+	local t2 = os.clock()
+	print("elapsed time:", t2 - t1, "seconds.")
 end
 
 main()
