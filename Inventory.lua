@@ -124,7 +124,10 @@ function Inventory:pull()
         end
     end
 
-    local input_i = 1
+    -- Do item pulling
+    print("Starting pull.")
+    local pulled   = 0
+    local input_i  = 1
     local output_i = 1
     while output_i <= #output_names
       and input_i  <= #input_names do
@@ -132,13 +135,32 @@ function Inventory:pull()
         local slots       = output_slots[output_i]
         for _, slot in ipairs(slots) do
             local input = peripheral.wrap(input_names[input_i])
-            input.pullItems(output_name, slot)
+            if input.pullItems(output_name, slot) > 0 then
+                pulled = pulled + 1
+            end
             input_slots[input_i] = input_slots[input_i] - 1
             if input_slots[input_i] == 0 then
                 input_i = input_i + 1
             end
         end
+        output_i = output_i + 1
     end
+    print("Pulled " .. pulled .. " slots.")
+
+    if output_i > #output_names then
+        output_i = #output_names
+    end
+
+    print("Updating chest database in memory.")
+    for i = 1, output_i do
+        local chest_name = output_names[i]
+        print("Updating " .. chest_name)
+        self:update_contents(chest_name)
+    end
+
+    print("Commiting changes to file.")
+    self:save_contents()
+
 
 --    print("viable inputs:")
 --    for i=1, #input_names do
