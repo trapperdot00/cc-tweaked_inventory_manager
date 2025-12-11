@@ -258,12 +258,13 @@ function Inventory:get(sought_items)
 
     print("Calculating viable chests.")
     local output = self:get_output_chests_containing(sought_items)
+    print(#output.names .. " viable output chests.")
+    if #output.names == 0 then return end
 
     self:scan_inputs()
     local input = self:get_nonfull_input_chests()
-    print(#output.names .. " viable output chests.")
     print(#input.names  .. " viable input chests.")
-    if #output.names == 0 or #input.names == 0 then return end
+    if #input.names == 0 then return end
     
     print("Starting get.")
     local got, output_i = table.unpack(
