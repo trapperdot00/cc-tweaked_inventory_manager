@@ -28,7 +28,6 @@ end
 function Inventory:get_slot_size(chest_id)
     local chest_data = self.contents[chest_id]
     local chest_size = chest_data.size
-    print(chest_id, "slots:", chest_size)
     return chest_size
 end
 
@@ -36,7 +35,6 @@ function Inventory:get_full_slots(chest_id)
     local chest_data  = self.contents[chest_id]
     local chest_items = chest_data.items
     local full_slots = tbl.size(chest_items)
-    print(chest_id, "full slots:", full_slots)
     return full_slots
 end
 
@@ -44,18 +42,12 @@ function Inventory:get_free_slots(chest_id)
     local slot_size  = self:get_slot_size(chest_id)
     local full_slots = self:get_full_slots(chest_id)
     local free_slots = slot_size - full_slots
-    print(chest_id, "free slots:", free_slots)
     return free_slots
 end
 
 function Inventory:is_full(chest_id)
     local slot_size  = self:get_slot_size(chest_id)
     local full_slots = self:get_full_slots(chest_id)
-
-    if slot_size == full_slots then
-        print("full: ", chest_id)
-    end
-
     return slot_size == full_slots
 end
 
@@ -87,11 +79,6 @@ end
 
 function Inventory:is_empty(chest_id)
     local full_slots = self:get_full_slots(chest_id)
-
-    if full_slots == 0 then
-        print("empty: ", chest_id)
-    end
-
     return full_slots == 0
 end
 
