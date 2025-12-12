@@ -51,6 +51,15 @@ function Inventory:is_full(chest_id)
     return slot_size == full_slots
 end
 
+function Inventory:is_empty(chest_id)
+    local full_slots = self:get_full_slots(chest_id)
+    return full_slots == 0
+end
+
+function Inventory:is_input_chest(chest_id)
+    return tbl.contains(self.inputs, chest_id)
+end
+
 -- Executes a plan to move an item between two chests
 --
 -- `plan` table's named members:
@@ -74,39 +83,70 @@ function Inventory:execute_plans(plans)
     end
 end
 
-function Inventory:do_push(output_names, free_slots_list)
-    local pushed   = 0
-    local input_i  = 1
-    local output_i = 1
-    while input_i  <= #self.inputs
-    and   output_i <= #output_names do
-        local input_id   = self.inputs[input_i]
-        local input      = peripheral.wrap(input_id)
-        local input_data = self.contents[input_id]
-        for slot, item in pairs(input_data.items) do
-            local output_name = output_names[output_i]
-            local pushed_count = input.pushItems(output_name, slot)
-            if pushed_count > 0 then
-                pushed = pushed + 1
-                free_slots_list[output_i] = free_slots_list[output_i] - 1
-                if free_slots_list[output_i] == 0 then
-                    output_i = output_i + 1
-                end
-                if output_i > #output_names then break end
-            end
+function Inventory:get_affected_chests(plans)
+    local affected = {}
+    for _, plan in ipairs(plans) do
+        if not tbl.contains(affected, plan.src) then
+            table.insert(affected, plan.src)
         end
-        input_i = input_i + 1
+        if not tbl.contains(affected, plan.dst) then
+            table.insert(affected, plan.dst)
+        end
     end
-    return { pushed, output_i }
+    return affected
 end
 
-function Inventory:is_empty(chest_id)
-    local full_slots = self:get_full_slots(chest_id)
-    return full_slots == 0
+-- Get movement plan for a basic push operation
+function Inventory:get_push_plans()
+    local plans = {}
+
+    local dst_ids, dst_slots = table.unpack(
+        self:get_viable_push_chests()
+    )
+
+    local src_i = 1
+    local dst_i = 1
+    while src_i <= #self.inputs and dst_i <= #dst_ids do
+        local src = self.inputs[src_i]
+        local src_data = self.contents[src]
+        for src_slot, item in pairs(src_data.items) do
+            local dst = dst_ids[dst_i]
+            local plan = {
+                src      = src,
+                dst      = dst,
+                src_slot = src_slot
+            }
+            table.insert(plans, plan)
+            dst_slots[dst_i] = dst_slots[dst_i] - 1
+            if dst_slots[dst_i] == 0 then
+                dst_i = dst_i + 1
+            end
+            if dst_i > #dst_ids then break end
+        end
+        src_i = src_i + 1
+    end
+    
+    return plans
 end
 
-function Inventory:is_input_chest(chest_id)
-    return tbl.contains(self.inputs, chest_id)
+-- Push items from input chests into output chests
+function Inventory:push()
+    self:load()
+
+    -- Get item movement plans
+    local plans = self:get_push_plans()
+    self:execute_plans(plans)
+    
+    -- Update affected chests in memory
+    local affected = self:get_affected_chests(plans)
+    for _, id in ipairs(affected) do
+        self:update_chest(id)
+    end
+
+    -- Update chest database file
+    if #affected > 0 then
+        self:save_contents()
+    end
 end
 
 function Inventory:get_viable_push_chests()
@@ -195,32 +235,6 @@ function Inventory:get_nonfull_input_chests()
     return { names = input_names, slots = input_slots }
 end
 
-function Inventory:do_push(output_names, free_slots_list)
-    local pushed   = 0
-    local input_i  = 1
-    local output_i = 1
-    while input_i  <= #self.inputs
-    and   output_i <= #output_names do
-        local input_id   = self.inputs[input_i]
-        local input      = peripheral.wrap(input_id)
-        local input_data = self.contents[input_id]
-        for slot, item in pairs(input_data.items) do
-            local output_name = output_names[output_i]
-            local pushed_count = input.pushItems(output_name, slot)
-            if pushed_count > 0 then
-                pushed = pushed + 1
-                free_slots_list[output_i] = free_slots_list[output_i] - 1
-                if free_slots_list[output_i] == 0 then
-                    output_i = output_i + 1
-                end
-                if output_i > #output_names then break end
-            end
-        end
-        input_i = input_i + 1
-    end
-    return { pushed, output_i }
-end
-
 function Inventory:do_pull(input, output)
     local pulled   = 0
     local input_i  = 1
@@ -269,34 +283,6 @@ function Inventory:do_get(input, output, sought_items)
         output_i = output_i + 1
     end
     return { got, output_i }
-end
-
-function Inventory:push()
-    self:load()
-
-    print("Calculating viable chests.")
-    local output_names, free_slots_list = table.unpack(
-        self:get_viable_push_chests()
-    )
-    print(#output_names .. " viable output chests.")
-    if #output_names == 0 then return end
-
-    print("Starting push.")
-    local pushed, output_i = table.unpack(
-        self:do_push(output_names, free_slots_list)
-    )
-    print("Pushed " .. pushed .. " slots.")
-
-    if pushed == 0 then return end
-    if output_i > #output_names then
-        output_i = #output_names
-    end
-
-    print("Updating chest database in memory.")
-    self:update_chests(output_names, 1, output_i)
-    
-    print("Commiting changes to file '" .. self.filename .. "'.")
-    self:save_contents()
 end
 
 function Inventory:pull()
@@ -366,12 +352,12 @@ end
 
 function Inventory:scan_inputs()
     for _, chest_name in ipairs(self.inputs) do
-        self:update_contents(chest_name)
+        self:update_chest(chest_name)
     end
     self:save_contents()
 end
 
-function Inventory:update_contents(chest_id)
+function Inventory:update_chest(chest_id)
     local chest = peripheral.wrap(chest_id)
     local chest_data = { size = chest.size(), items = chest.list() }
     self.contents[chest_id] = chest_data
@@ -381,7 +367,7 @@ function Inventory:update_chests(chest_list, start_, end_)
     for i = start_, end_ do
         local chest_name = chest_list[i]
         print("Updating " .. chest_name)
-        self:update_contents(chest_name)
+        self:update_chest(chest_name)
     end
 end
 
