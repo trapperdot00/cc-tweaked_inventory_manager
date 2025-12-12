@@ -51,6 +51,29 @@ function Inventory:is_full(chest_id)
     return slot_size == full_slots
 end
 
+-- Executes a plan to move an item between two chests
+--
+-- `plan` table's named members:
+--   `src`: identifies the source chest by id
+--   `dst`: identifies the destination chest by id
+--   `src_slot`: identifies an item by its occupied slot
+--               to be moved from `src` into `dst`
+function Inventory:execute_plan(plan)
+    local src      = plan.src
+    local dst      = plan.dst
+    local src_slot = plan.src_slot
+
+    local src_chest = peripheral.wrap(src)
+    src_chest.pushItems(dst, src_slot)
+end
+
+-- Execute a list of plans in sequence
+function Inventory:execute_plans(plans)
+    for _, plan in ipairs(plans) do
+        self:execute_plan(plan)
+    end
+end
+
 function Inventory:do_push(output_names, free_slots_list)
     local pushed   = 0
     local input_i  = 1
