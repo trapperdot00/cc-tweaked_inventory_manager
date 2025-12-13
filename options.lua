@@ -23,6 +23,9 @@ function options.parse()
         if curr_arg == "--pull" then
             self.pull = true
         end
+        if curr_arg == "--configure" then
+            self.conf = true
+        end
         if curr_arg == "--scan" then
             self.scan = true
         end
