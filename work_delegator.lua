@@ -1,4 +1,4 @@
-local debugger			= require("debugger")
+local debugger			= require("utils.debugger")
 local work_delegator	= {}
 
 local function print_inputs(inventory)

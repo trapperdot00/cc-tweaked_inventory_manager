@@ -1,9 +1,9 @@
 local tbl          = require("utils.table_utils")
-local chest_parser = require("chest_parser")
+local chest_parser = require("utils.chest_parser")
 
-local push      = require("cmds.push")
-local pull      = require("cmds.pull")
-local get       = require("cmds.get")
+local push      = require("cmd.push")
+local pull      = require("cmd.pull")
+local get       = require("cmd.get")
 
 local Inventory = {}
 Inventory.__index = Inventory

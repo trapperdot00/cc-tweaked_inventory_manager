@@ -1,4 +1,4 @@
-local cfg       = require("config_reader")
+local cfg       = require("utils.config_reader")
 local cliargs   = require("options")
 local work      = require("work_delegator")
 local Inventory = require("Inventory")
