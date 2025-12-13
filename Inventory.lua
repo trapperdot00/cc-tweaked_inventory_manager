@@ -102,6 +102,7 @@ end
 
 -- Get movement plan for a basic push operation
 function Inventory:get_push_plans()
+    self:load()
     local plans = {}
 
     local dst_ids, dst_slots = table.unpack(
@@ -133,24 +134,65 @@ function Inventory:get_push_plans()
     return plans
 end
 
--- Push items from input chests into output chests
-function Inventory:push()
+function Inventory:get_pull_plans()
     self:load()
+    local plans = {}
 
-    -- Get item movement plans
-    local plans = self:get_push_plans()
+    local dsts, srcs = table.unpack(
+        self:get_viable_pull_chests()
+    )
+
+    local dst_i = 1
+    local src_i = 1
+    while dst_i <= #dsts.names and src_i <= #srcs.names do
+        local src       = srcs.names[src_i]
+        local src_slots = srcs.slots[src_i]
+        for _, src_slot in ipairs(src_slots) do
+            local dst = dsts.names[dst_i]
+            local plan = {
+                src      = src,
+                dst      = dst,
+                src_slot = src_slot
+            }
+            table.insert(plans, plan)
+            dsts.slots[dst_i] = dsts.slots[dst_i] - 1
+            if dsts.slots[dst_i] == 0 then
+                dst_i = dst_i + 1
+            end
+            if dst_i > #dsts.names then break end
+        end
+        src_i = src_i + 1
+    end
+
+    return plans
+end
+
+function Inventory:carry_out(plans)
     self:execute_plans(plans)
     
     -- Update affected chests in memory
     local affected = self:get_affected_chests(plans)
     for _, id in ipairs(affected) do
+        print("updating", id)
         self:update_chest(id)
     end
 
     -- Update chest database file
     if #affected > 0 then
+        print("saving to file", self.filename)
         self:save_contents()
     end
+end
+
+-- Push items from input chests into output chests
+function Inventory:push()
+    local plans = self:get_push_plans()
+    self:carry_out(plans)
+end
+
+function Inventory:pull()
+    local plans = self:get_pull_plans()
+    self:carry_out(plans)
 end
 
 function Inventory:get_viable_push_chests()
@@ -239,30 +281,6 @@ function Inventory:get_nonfull_input_chests()
     return { names = input_names, slots = input_slots }
 end
 
-function Inventory:do_pull(input, output)
-    local pulled   = 0
-    local input_i  = 1
-    local output_i = 1
-    while output_i <= #output.names
-    and   input_i  <= #input.names do
-        local output_name = output.names[output_i]
-        local slots       = output.slots[output_i]
-        for _, slot in ipairs(slots) do
-            local input_chest = peripheral.wrap(input.names[input_i])
-            if input_chest.pullItems(output_name, slot) > 0 then
-                pulled = pulled + 1
-            end
-            input.slots[input_i] = input.slots[input_i] - 1
-            if input.slots[input_i] == 0 then
-                input_i = input_i + 1
-            end
-            if input_i > #input.names then break end
-        end
-        output_i = output_i + 1
-    end
-    return { pulled, output_i }
-end
-
 function Inventory:do_get(input, output, sought_items)
     local got      = 0
     local output_i = 1
@@ -287,35 +305,6 @@ function Inventory:do_get(input, output, sought_items)
         output_i = output_i + 1
     end
     return { got, output_i }
-end
-
-function Inventory:pull()
-    self:load()
-
-    print("Calculating viable chests.")
-    local input, output = table.unpack(
-        self:get_viable_pull_chests()
-    )
-    print(#input.names  .. " viable input chests.")
-    print(#output.names .. " viable output chests.")
-    if #input.names == 0 or #output.names == 0 then return end
-
-    print("Starting pull.")
-    local pulled, output_i = table.unpack(
-        self:do_pull(input, output)
-    )
-    print("Pulled " .. pulled .. " slots.")
-
-    if pulled == 0 then return end
-    if output_i > #output.names then
-        output_i = #output.names
-    end
-
-    print("Updating chest database in memory.")
-    self:update_chests(output.names, 1, output_i)
-
-    print("Commiting changes to file '" .. self.filename .. "'.")
-    self:save_contents()
 end
 
 function Inventory:scan()
