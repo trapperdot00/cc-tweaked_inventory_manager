@@ -76,11 +76,15 @@ function Inventory:execute_plan(plan)
     src_chest.pushItems(dst, src_slot)
 end
 
--- Execute a list of plans in sequence
+-- Execute a list of plans in parallel
 function Inventory:execute_plans(plans)
+    local tasks = {}
     for _, plan in ipairs(plans) do
-        self:execute_plan(plan)
+        table.insert(tasks,
+            function() self:execute_plan(plan) end
+        )
     end
+    parallel.waitForAll(table.unpack(tasks))
 end
 
 function Inventory:get_affected_chests(plans)
