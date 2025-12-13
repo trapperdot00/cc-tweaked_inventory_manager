@@ -216,7 +216,7 @@ function config_reader.write_seque(seque, filename)
         else
             file:write(",\n")
         end
-        file:write("\t\"" .. item .. '"')
+        file:write("    \"" .. item .. '"')
     end
     file:write("\n}")
 end

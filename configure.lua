@@ -108,6 +108,7 @@ function configure.run(filename)
                 table.insert(self.inputs, chest)
             end
         elseif keys.getName(key) == 'q' then
+            os.pullEvent(char)
             break
         end
     end
