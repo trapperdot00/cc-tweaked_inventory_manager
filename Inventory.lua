@@ -273,7 +273,7 @@ function Inventory:get_nonfull_input_chests()
     local input_slots = {}
     for _, input_name in ipairs(self.inputs) do
         local free_slots = self:get_free_slots(input_name)
-        if not self:is_empty(input_name) then
+        if not self:is_full(input_name) then
             table.insert(input_names, input_name)
             table.insert(input_slots, free_slots)
         end
@@ -375,13 +375,13 @@ function Inventory:count(sought_items)
     for _, sought_item in ipairs(sought_items) do
         for chest_name, contents in pairs(self.contents) do
             for _, item in ipairs(contents.items) do
-                if item.name == sought_item then
-                    if sought_items[#counts] == sought_item then
-                        counts[#counts] = counts[#counts] + item.count
-                    else
-                        table.insert(counts, item.count)
-                    end
+                if item.name ~= sought_item then goto continue end
+                if sought_items[#counts] == sought_item then
+                    counts[#counts] = counts[#counts] + item.count
+                else
+                    table.insert(counts, item.count)
                 end
+                ::continue::
             end
         end
     end
