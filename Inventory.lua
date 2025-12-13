@@ -3,6 +3,7 @@ local chest_parser = require("chest_parser")
 
 local push      = require("push")
 local pull      = require("pull")
+local get       = require("get")
 
 local Inventory = {}
 Inventory.__index = Inventory
@@ -28,12 +29,16 @@ function Inventory:load(noscan)
     end
 end
 
+-- Returns the capacity of the given
+-- inventory entity referred to as an ID in slots
 function Inventory:get_slot_size(chest_id)
     local chest_data = self.contents[chest_id]
     local chest_size = chest_data.size
     return chest_size
 end
 
+-- Returns the count of occupied slots
+-- of the given inventory object referred to as an ID
 function Inventory:get_full_slots(chest_id)
     local chest_data  = self.contents[chest_id]
     local chest_items = chest_data.items
@@ -41,6 +46,8 @@ function Inventory:get_full_slots(chest_id)
     return full_slots
 end
 
+-- Returns the non-occupied/free slots
+-- of the given inventory entity referred to as an ID
 function Inventory:get_free_slots(chest_id)
     local slot_size  = self:get_slot_size(chest_id)
     local full_slots = self:get_full_slots(chest_id)
@@ -48,17 +55,28 @@ function Inventory:get_free_slots(chest_id)
     return free_slots
 end
 
+-- Returns whether the given inventory entity
+-- referred to as an ID
+--  -> has only occupied/full slots
+--  -> has no more unoccupied/free slots
 function Inventory:is_full(chest_id)
     local slot_size  = self:get_slot_size(chest_id)
     local full_slots = self:get_full_slots(chest_id)
     return slot_size == full_slots
 end
 
+-- Returns whether the given inventory entity
+-- referred to as an ID
+--  -> has only unoccupied/free slots
+--  -> has no occupied/full slots
 function Inventory:is_empty(chest_id)
     local full_slots = self:get_full_slots(chest_id)
     return full_slots == 0
 end
 
+-- Checks whether the given inventory entity
+-- referred to as an ID
+-- is labeled as an input chest
 function Inventory:is_input_chest(chest_id)
     return tbl.contains(self.inputs, chest_id)
 end
@@ -90,6 +108,15 @@ function Inventory:execute_plans(plans)
     parallel.waitForAll(table.unpack(tasks))
 end
 
+-- Returns an array-like table containing
+-- the inventory IDs listed inside the given plan-list.
+-- The IDs are listed only once.
+--
+-- `plan` table's named members:
+--   `src`: identifies the source chest by id
+--   `dst`: identifies the destination chest by id
+--   `src_slot`: identifies an item by its occupied slot
+--               to be moved from `src` into `dst`
 function Inventory:get_affected_chests(plans)
     local affected = {}
     for _, plan in ipairs(plans) do
@@ -103,6 +130,8 @@ function Inventory:get_affected_chests(plans)
     return affected
 end
 
+-- Executes a given list of item-moving plans
+-- and updates the affected inventories' databases.
 function Inventory:carry_out(plans)
     self:execute_plans(plans)
     
@@ -120,113 +149,25 @@ function Inventory:carry_out(plans)
     end
 end
 
--- Push items from input chests into output chests
+-- Push items from the input chests into the output chests.
 function Inventory:push()
     local plans = push.get_push_plans(self)
     self:carry_out(plans)
 end
 
+-- Pull items from the output chests into the input chests.
 function Inventory:pull()
     local plans = pull.get_pull_plans(self)
     self:carry_out(plans)
 end
 
-function Inventory:get_output_chests_containing(sought_items)
-    local output_names = {}
-    local output_slots = {}
-    for chest_name, contents in pairs(self.contents) do
-        if not self:is_input_chest(chest_name) then
-            local slots = {}
-            for slot, item in pairs(contents.items) do
-                for _, sought_item in ipairs(sought_items) do
-                    if item.name == sought_item then
-                        if output_names[#output_names] ~= chest_name then
-                            table.insert(output_names, chest_name)
-                        end
-                        table.insert(slots, slot)
-                    end
-                end
-            end
-            if #slots > 0 then
-                table.insert(output_slots, slots)
-            end
-        end
-    end
-    return { names = output_names, slots = output_slots }
-end
-
-function Inventory:get_nonfull_input_chests()
-    local input_names = {}
-    local input_slots = {}
-    for _, input_name in ipairs(self.inputs) do
-        local free_slots = self:get_free_slots(input_name)
-        if not self:is_full(input_name) then
-            table.insert(input_names, input_name)
-            table.insert(input_slots, free_slots)
-        end
-    end
-    return { names = input_names, slots = input_slots }
-end
-
-function Inventory:do_get(input, output, sought_items)
-    local got      = 0
-    local output_i = 1
-    local input_i  = 1
-    while output_i <= #output.names
-    and   input_i  <= #input.names do
-        local output_name = output.names[output_i]
-        local output_chest = peripheral.wrap(output_name)
-        local output_slot_i = 1
-        while output_slot_i <= #output.slots[output_i] do
-            local output_slot = output.slots[output_i][output_slot_i]
-            local input_name = input.names[input_i]
-            if output_chest.pushItems(input_name, output_slot) > 0 then
-                got = got + 1
-            end
-            input.slots[input_i] = input.slots[input_i] - 1
-            if input.slots[input_i] <= 0 then
-                input_i = input_i + 1
-            end
-            output_slot_i = output_slot_i + 1
-        end
-        output_i = output_i + 1
-    end
-    return { got, output_i }
+function Inventory:get(sought_items)
+    local plans = get.get_get_plans(self, sought_items)
+    self:carry_out(plans)
 end
 
 function Inventory:scan()
     self.contents = chest_parser.read_from_chests()
-    self:save_contents()
-end
-
-function Inventory:get(sought_items)
-    self:load(true)
-
-    print("Calculating viable chests.")
-    local output = self:get_output_chests_containing(sought_items)
-    print(#output.names .. " viable output chests.")
-    if #output.names == 0 then return end
-
-    self:scan_inputs()
-    local input = self:get_nonfull_input_chests()
-    print(#input.names  .. " viable input chests.")
-    if #input.names == 0 then return end
-    
-    print("Starting get.")
-    local got, output_i = table.unpack(
-        self:do_get(input, output, sought_items)
-    )
-    print("Got " .. got .. " slots.")
-
-    if got == 0 then return end
-    if output_i > #output.names then
-        output_i = #output.names
-    end
-
-    print("Updating chest database in memory.")
-    self:update_chests(output.names, 1, output_i)
-
-    print("Commiting changes to file '" .. self.filename .. "'.")
     self:save_contents()
 end
 
