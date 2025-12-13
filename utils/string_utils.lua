@@ -21,4 +21,29 @@ function string_utils.split(s, delim)
     return result
 end
 
+function string_utils.rpad(s, ch, width)
+    while s:len() < width do
+        s = s .. ch
+    end
+    return s
+end
+
+function string_utils.lpad(s, ch, width)
+    while s:len() < width do
+        s = ch .. s
+    end
+    return s
+end
+
+function string_utils.pad(s, ch, width)
+    while s:len() < width do
+        if s:len() % 2 == 0 then
+            s = ch .. s
+        else
+            s = s .. ch
+        end
+    end
+    return s
+end
+
 return string_utils
