@@ -4,26 +4,23 @@ local work      = require("work_delegator")
 local Inventory = require("Inventory")
 
 local function main()
-    local pwd = shell.resolve(".")
+    local pwd = fs.getDir(shell.resolve(arg[0]))
 
     -- Files
-    local inventory_file = pwd .. "/items.data"
-    local inputs_file    = pwd .. "/inputs.txt"
+    local inventory_file = fs.combine(pwd, "items.data")
+    local inputs_file    = fs.combine(pwd, "inputs.txt")
 
     if not fs.exists(inputs_file) then
         print("Input-chest file '" .. inputs_file .. "' doesn't exist.")
         return
     end
 
-    local options   = cliargs.parse()
     local inputs    = cfg.read_seque(inputs_file)
+    local options   = cliargs.parse()
     local inventory = Inventory.new(inputs, inventory_file)
     
     -- Select appropriate work for command-line arguments
-    local t1 = os.clock()
     work.delegate(options, inventory)
-    local t2 = os.clock()
-    print("elapsed time:", t2 - t1, "seconds.")
 end
 
 main()
