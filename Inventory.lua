@@ -1,6 +1,9 @@
 local tbl          = require("table_utils")
 local chest_parser = require("chest_parser")
 
+local push      = require("push")
+local pull      = require("pull")
+
 local Inventory = {}
 Inventory.__index = Inventory
 
@@ -100,73 +103,6 @@ function Inventory:get_affected_chests(plans)
     return affected
 end
 
--- Get movement plan for a basic push operation
-function Inventory:get_push_plans()
-    self:load()
-    local plans = {}
-
-    local dst_ids, dst_slots = table.unpack(
-        self:get_viable_push_chests()
-    )
-
-    local src_i = 1
-    local dst_i = 1
-    while src_i <= #self.inputs and dst_i <= #dst_ids do
-        local src = self.inputs[src_i]
-        local src_data = self.contents[src]
-        for src_slot, item in pairs(src_data.items) do
-            local dst = dst_ids[dst_i]
-            local plan = {
-                src      = src,
-                dst      = dst,
-                src_slot = src_slot
-            }
-            table.insert(plans, plan)
-            dst_slots[dst_i] = dst_slots[dst_i] - 1
-            if dst_slots[dst_i] == 0 then
-                dst_i = dst_i + 1
-            end
-            if dst_i > #dst_ids then break end
-        end
-        src_i = src_i + 1
-    end
-    
-    return plans
-end
-
-function Inventory:get_pull_plans()
-    self:load()
-    local plans = {}
-
-    local dsts, srcs = table.unpack(
-        self:get_viable_pull_chests()
-    )
-
-    local dst_i = 1
-    local src_i = 1
-    while dst_i <= #dsts.names and src_i <= #srcs.names do
-        local src       = srcs.names[src_i]
-        local src_slots = srcs.slots[src_i]
-        for _, src_slot in ipairs(src_slots) do
-            local dst = dsts.names[dst_i]
-            local plan = {
-                src      = src,
-                dst      = dst,
-                src_slot = src_slot
-            }
-            table.insert(plans, plan)
-            dsts.slots[dst_i] = dsts.slots[dst_i] - 1
-            if dsts.slots[dst_i] == 0 then
-                dst_i = dst_i + 1
-            end
-            if dst_i > #dsts.names then break end
-        end
-        src_i = src_i + 1
-    end
-
-    return plans
-end
-
 function Inventory:carry_out(plans)
     self:execute_plans(plans)
     
@@ -186,62 +122,13 @@ end
 
 -- Push items from input chests into output chests
 function Inventory:push()
-    local plans = self:get_push_plans()
+    local plans = push.get_push_plans(self)
     self:carry_out(plans)
 end
 
 function Inventory:pull()
-    local plans = self:get_pull_plans()
+    local plans = pull.get_pull_plans(self)
     self:carry_out(plans)
-end
-
-function Inventory:get_viable_push_chests()
-    local output_names    = {}
-    local free_slots_list = {}
-    for output_name, contents in pairs(self.contents) do
-        if not self:is_input_chest(output_name) then
-            local free_slots = self:get_free_slots(output_name)
-            if free_slots > 0 then
-                table.insert(output_names, output_name)
-                table.insert(free_slots_list, free_slots)
-            end
-        end
-    end
-    return { output_names, free_slots_list }
-end
-
-function Inventory:get_viable_pull_chests()
-    local input_names  = {}
-    local input_slots  = {}
-    local output_names = {}
-    local output_slots = {}
-    for chest_name, contents in pairs(self.contents) do
-        if self:is_input_chest(chest_name) then
-            if not self:is_full(chest_name) then
-                local empty_slots = self:get_free_slots(chest_name)
-                table.insert(input_names, chest_name)
-                table.insert(input_slots, empty_slots)
-            end
-        else
-            if not self:is_empty(chest_name) then
-                table.insert(output_names, chest_name)
-                local slots = {}
-                for slot, item in pairs(contents.items) do
-                    table.insert(slots, slot)
-                end
-                table.insert(output_slots, slots)
-            end
-        end
-    end
-    local input = {
-        names = input_names,
-        slots = input_slots
-    }
-    local output = {
-        names = output_names,
-        slots = output_slots
-    }
-    return { input, output }
 end
 
 function Inventory:get_output_chests_containing(sought_items)
