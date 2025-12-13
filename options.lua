@@ -11,8 +11,7 @@ function options.parse()
         get             = {},
         count           = {},
         -- Non-exclusive:
-        scan            = false,
-        print_inputs    = false
+        scan            = false
     }
     setmetatable(self, options)
     for i = 1, #arg do
@@ -37,9 +36,6 @@ function options.parse()
             local equal_pos = curr_arg:find('=', 1, true) + 1
             self.count = str.split(curr_arg:sub(equal_pos), ',')
         end
-        if curr_arg == "--print-inputs" then
-            self.print_inputs = true
-        end
     end
     return self
 end
@@ -57,9 +53,6 @@ end
 function options:count_nonexclusives()
     local count = 0
     if self.scan == true then
-        count = count + 1
-    end
-    if self.print_inputs == true then
         count = count + 1
     end
     return count

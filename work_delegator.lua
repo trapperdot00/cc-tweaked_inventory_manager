@@ -14,7 +14,6 @@ local function print_help()
     print("         --push --pull --scan")
     print("         --get=<item1>[,<itemN>]...")
     print("         --count=<item1>[,<itemN>]...")
-    print("         --print-inputs")
 end
 
 local function load_inputs(inputs_file)
@@ -39,12 +38,12 @@ function work_delegator.delegate(options, inputs_file, inventory_file)
     local inputs    = load_inputs(inputs_file)
     local inventory = Inventory.new(inputs, inventory_file)
 
+    -- Non-exclusive flags
     if options.scan then
         inventory:scan()
-    elseif options.print_inputs then
-        print_inputs(inventory)
     end
 
+    -- Exclusive flags
     if options.push then
         inventory:push()
     elseif options.pull then
