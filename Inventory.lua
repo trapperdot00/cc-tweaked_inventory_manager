@@ -3,6 +3,7 @@ local chest_parser = require("utils.chest_parser")
 
 local push      = require("cmd.push")
 local pull      = require("cmd.pull")
+local size      = require("cmd.size")
 local get       = require("cmd.get")
 local count     = require("cmd.count")
 local find      = require("cmd.find")
@@ -161,6 +162,14 @@ end
 function Inventory:pull()
     local plans = pull.get_pull_plans(self)
     self:carry_out(plans)
+end
+
+function Inventory:size()
+    local in_slots, out_slots = size.size(self)
+    local full_slots = in_slots + out_slots
+    print("[IN] :", in_slots)
+    print("[OUT]:", out_slots)
+    print("[ALL]:", full_slots)
 end
 
 function Inventory:get(sought_items)

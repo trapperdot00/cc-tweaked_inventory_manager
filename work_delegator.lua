@@ -11,7 +11,7 @@ end
 local function print_help()
     print("usage: " .. arg[0] .. " [options]")
     print("options: --configure")
-    print("         --push --pull --scan")
+    print("         --push --pull --scan --size")
     print("         --get=<item1>[,<itemN>]...")
     print("         --count=<item1>[,<itemN>]...")
     print("         --find=<item1>[,<itemN>]...")
@@ -49,6 +49,8 @@ function work_delegator.delegate(options, inputs_file, inventory_file)
         inventory:push()
     elseif options.pull then
         inventory:pull()
+    elseif options.size then
+        inventory:size()
     elseif #options.get > 0 then
         inventory:get(options.get)
     elseif #options.count > 0 then
