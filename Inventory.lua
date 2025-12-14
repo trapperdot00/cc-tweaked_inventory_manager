@@ -4,6 +4,7 @@ local chest_parser = require("utils.chest_parser")
 local push      = require("cmd.push")
 local pull      = require("cmd.pull")
 local size      = require("cmd.size")
+local usage     = require("cmd.usage")
 local get       = require("cmd.get")
 local count     = require("cmd.count")
 local find      = require("cmd.find")
@@ -170,6 +171,14 @@ function Inventory:size()
     print("[IN] :", in_slots)
     print("[OUT]:", out_slots)
     print("[ALL]:", full_slots)
+end
+
+function Inventory:usage()
+    local total, used = usage.usage(self)
+    local percent = (used / total) * 100
+    print("[USED]:", used)
+    print("[ALL] :", total)
+    print("["..tostring(percent).."%]")
 end
 
 function Inventory:get(sought_items)

@@ -9,6 +9,7 @@ function options.parse()
         pull            = false,
         conf            = false,
         size            = false,
+        usage           = false,
         get             = {},
         count           = {},
         find            = {},
@@ -29,6 +30,9 @@ function options.parse()
         end
         if curr_arg == "--size" then
             self.size = true
+        end
+        if curr_arg == "--usage" then
+            self.usage = true
         end
         if curr_arg == "--scan" then
             self.scan = true
@@ -51,10 +55,11 @@ end
 
 function options:count_exclusives()
     local count = 0
-    if self.push then count = count + 1 end
-    if self.pull then count = count + 1 end
-    if self.conf then count = count + 1 end
-    if self.size then count = count + 1 end
+    if self.push  then count = count + 1 end
+    if self.pull  then count = count + 1 end
+    if self.conf  then count = count + 1 end
+    if self.size  then count = count + 1 end
+    if self.usage then count = count + 1 end
     if #self.get   > 0 then count = count + 1 end
     if #self.count > 0 then count = count + 1 end
     if #self.find > 0 then count = count + 1 end
