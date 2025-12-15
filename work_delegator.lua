@@ -26,7 +26,8 @@ local function load_inputs(inputs_file)
     return cfg.read_seque(inputs_file, "")
 end
 
-function work_delegator.delegate(options, inputs_file, inventory_file)
+function work_delegator.delegate
+(options, inputs_file, inventory_file, stack_file)
     if not options:valid() then
         print_help()
         return
@@ -38,7 +39,7 @@ function work_delegator.delegate(options, inputs_file, inventory_file)
     end
 
     local inputs    = load_inputs(inputs_file)
-    local inventory = Inventory.new(inputs, inventory_file)
+    local inventory = Inventory.new(inputs, inventory_file, stack_file)
 
     -- Non-exclusive flags
     if options.scan then

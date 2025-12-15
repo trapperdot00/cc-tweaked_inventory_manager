@@ -1,5 +1,6 @@
 local tbl          = require("utils.table_utils")
 local chest_parser = require("utils.chest_parser")
+local cfg          = require("utils.config_reader")
 
 local push      = require("cmd.push")
 local pull      = require("cmd.pull")
@@ -12,11 +13,14 @@ local find      = require("cmd.find")
 local Inventory = {}
 Inventory.__index = Inventory
 
-function Inventory.new(inputs, filename)
-    local self = setmetatable({}, Inventory)
-    self.inputs   = inputs
-    self.filename = filename
-    self.contents = nil
+function Inventory.new(inputs, filename, stack_filename)
+    local self = setmetatable({
+        inputs             = inputs,
+        filename           = filename,
+        stack              = nil,
+        stack_filename     = stack_filename,
+        contents           = nil
+    }, Inventory)
     return self
 end
 
@@ -154,11 +158,22 @@ function Inventory:carry_out(plans)
 end
 
 -- TODO: clean up this
+function Inventory:load_stack()
+    if self.stack then return end
+    local file = io.open(self.stack_filename)
+    if not file then self.stack = {} return end
+    local text = file:read('a')
+    self.stack = textutils.unserialize(text) or {}
+    for _, item in ipairs(self.stack) do
+        print(item.name, item.stacksize)
+    end
+end
+
+-- TODO: clean up this
 function Inventory:update_stacksize(plans)
-    local filename = "/chest/stack.data"
-    local file = io.open(filename, 'w')
+    self:load_stack()
+    local file = io.open(self.stack_filename, 'w')
     if not file then return end
-    local entries = {}
     for _, plan in ipairs(plans) do
         local src      = plan.src
         local src_slot = plan.src_slot
@@ -169,12 +184,14 @@ function Inventory:update_stacksize(plans)
             name = item.name,
             stacksize = item.maxCount
         }
-        table.insert(entries, entry)
+        local eq = function(a, b)
+            return a.name == b.name
+        end
+        if not tbl.contains(self.stack, entry, eq) then
+            table.insert(self.stack, entry)
+        end
     end
-    for _, entry in ipairs(entries) do
-        local line = entry.name .. ' = ' .. entry.stacksize .. '\n'
-        file:write(line)
-    end
+    file:write(textutils.serialize(self.stack))
 end
 
 -- Push items from the input chests into the output chests.
