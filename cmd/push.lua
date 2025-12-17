@@ -12,16 +12,14 @@ function push.get_viable_push_chests(self)
             end
         end
     end
-    return { output_names, free_slots_list }
+    return output_names, free_slots_list
 end
 
 function push.get_push_plans(self)
     self:load()
     local plans = {}
 
-    local dst_ids, dst_slots = table.unpack(
-        push.get_viable_push_chests(self)
-    )
+    local dst_ids, dst_slots = push.get_viable_push_chests(self)
 
     local src_i = 1
     local dst_i = 1

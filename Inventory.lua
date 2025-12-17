@@ -252,7 +252,6 @@ function Inventory:scan_inputs()
     for _, chest_name in ipairs(self.inputs) do
         self:update_chest(chest_name)
     end
-    self:save_contents()
 end
 
 function Inventory:update_chest(chest_id)
