@@ -1,24 +1,33 @@
 local push = {}
 
---function push.get_viable_push_chests(self)
---    local output_names    = {}
---    local free_slots_list = {}
---    for output_name, contents in pairs(self.contents) do
---        if not self:is_input_chest(output_name) then
---            local free_slots = self:get_free_slots(output_name)
---            if free_slots > 0 then
---                table.insert(output_names, output_name)
---                table.insert(free_slots_list, free_slots)
---            end
---        end
---    end
---    return output_names, free_slots_list
---end
---
+-- Get a list of output IDs and a list of free slots.
+-- The two lists are connected through indices:
+-- the output ID at index 10 has the free slot at index 10
+-- number of free slots available.
+-- The free slots are the slots that have no items in them
+-- whatsoever.
+function push.get_nonfull_output_chests(self)
+    local output_names    = {}
+    local free_slots_list = {}
+    for output_name, contents in pairs(self.contents) do
+        if not self:is_input_chest(output_name) then
+            local free_slots = self:get_free_slots(output_name)
+            if free_slots > 0 then
+                table.insert(output_names, output_name)
+                table.insert(free_slots_list, free_slots)
+            end
+        end
+    end
+    return output_names, free_slots_list
+end
 
+-- Get an associative table that maps item names
+-- to an associative table that maps output chest IDs
+-- to slot indices that denote slots in output chests
+-- that are not empty, nor full.
+-- (as in item's count is less than its stack size)
 function push.get_nonfull_viable_output_slots(self)
     local item_dst = {}
-
     for chest_id, contents in pairs(self.contents) do
         if not self:is_input_chest(chest_id) then
             goto next_chest
@@ -50,26 +59,137 @@ function push.get_nonfull_viable_output_slots(self)
         end
         ::next_chest::
     end
+    return item_dst
+end
 
-    for item, dst in pairs(item_dst) do
+-- Get an associative table that maps an item name
+-- to an associative table that maps a chest ID
+-- to a list of slots.
+function push.get_input_item_slots(self)
+    local input_item_slots = {}
+    local work = function(chest_id, slot, item)
+        if not input_item_slots[item.name] then
+            input_item_slots[item.name] = {}
+        end
+        if not input_item_slots[item.name][chest_id] then
+            input_item_slots[item.name][chest_id] = {}
+        end
+        local entry = input_item_slots[item.name][chest_id]
+        table.insert(entry, slot)
+    end
+    self:for_each_input_slot(work)
+    return input_item_slots
+end
+
+local function print_input_item_slots(input_item_slots)
+    for item, chests in pairs(input_item_slots) do
         print(item)
-        for dst_id, dst_slots in pairs(dst) do
-            print(dst_id)
-            for _, dst_slot in ipairs(dst_slots) do
-                print(dst_slot)
-            end
+        for chest_id, slots in pairs(chests) do
+            print("  in: "..chest_id, table.unpack(slots))
         end
     end
-    return item_dst
+end
+
+local function print_item_dsts(item_dsts)
+    for item_name, dsts in pairs(item_dsts) do
+        print(item_name)
+        for dst_id, dst_slots in pairs(dsts) do
+            print("  "..dst_id, table.unpack(dst_slots))
+        end
+    end
+end
+
+local function print_dsts_dst_frees(dsts, dst_frees)
+    for i = 1, #dsts do
+        print(dsts[i], dst_frees[i])
+    end
+end
+
+local function print_plan(plan)
+    print(plan.src, '[', plan.src_slot, "] ->", plan.dst, "[", plan.dst_slot, "] {", plan.count, "}")
+end
+
+local function print_plans(plans)
+    for _, plan in ipairs(plans) do
+        print_plan(plan)
+    end
+end
+
+function deepcopy(orig, copies)
+    copies = copies or {}
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        if copies[orig] then
+            copy = copies[orig]
+        else
+            copy = {}
+            copies[orig] = copy
+            for orig_key, orig_value in next, orig, nil do
+                copy[deepcopy(orig_key, copies)] = deepcopy(orig_value, copies)
+            end
+            setmetatable(copy, deepcopy(getmetatable(orig), copies))
+        end
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end
+
+function push.get_existing_slot_filling_plans(self, contents)
+    local plans = {}
+    local input_item_slots = push.get_input_item_slots(self)
+    local item_dsts        = push.get_nonfull_viable_output_slots(self)
+    for item_name, inputs in pairs(input_item_slots) do
+        local stack_size = self.stacks[item_name]
+        for input_id, input_slots in pairs(inputs) do
+            local input_contents = contents[input_id]
+            for _, input_slot in ipairs(input_slots) do
+                local item      = input_contents.items[input_slot]
+                local src_count = item.count
+                local vdsts     = item_dsts[item_name]
+                for dst_id, dst_slots in pairs(vdsts) do
+                    for _, dst_slot in ipairs(dst_slots) do
+                        local dst_contents = contents[dst_id]
+                        local dst_item     = dst_contents.items[dst_slot]
+                        local dst_count    = dst_item.count
+                        local available    = stack_size - dst_count
+                        local pushable     = math.min(src_count, available)
+                        if pushable == 0 then goto next_output_slot end
+                        src_count = src_count - pushable
+                        local plan = {
+                            src      = input_id,
+                            dst      = dst_id,
+                            src_slot = input_slot,
+                            dst_slot = dst_slot,
+                            count    = pushable
+                        }
+                        table.insert(plans, plan)
+                        dst_item.count = dst_item.count + pushable
+                        if src_count == 0 then
+                            goto next_input_slot
+                        end
+                        ::next_output_slot::
+                    end
+                    ::next_output::
+                end
+                ::next_input_slot::
+            end
+            ::next_input::
+        end
+        ::next_item::
+    end
+    return plans
 end
 
 function push.get_push_plans(self)
     self:load()
-    local item_dst = push.get_nonfull_viable_output_slots(self)
---    local plans = {}
---
+    local contents = deepcopy(self.contents)
+    local plans = push.get_existing_slot_filling_plans(self, contents)
+    --local dsts, dst_frees  = push.get_nonfull_output_chests(self)
+
+    print_plans(plans)
 --    local dst_ids, dst_slots = push.get_viable_push_chests(self)
---
 --    local src_i = 1
 --    local dst_i = 1
 --    while src_i <= #self.inputs and dst_i <= #dst_ids do
@@ -91,7 +211,6 @@ function push.get_push_plans(self)
 --        end
 --        src_i = src_i + 1
 --    end
-    
     return plans
 end
 
