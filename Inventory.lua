@@ -12,13 +12,27 @@ local find      = require("cmd.find")
 local Inventory = {}
 Inventory.__index = Inventory
 
-function Inventory.new(inputs, filename, stack_filename)
+-- Constructs and returns a new instance of Inventory
+-- Named fields:
+--     `inputs`        : Array of input chest IDs.
+--     `contents_path` : Filename of the document that
+--                       lists the current state of the
+--                       managed chest-system.
+--     `contents`      : Table that keeps track of the current
+--                       state of the managed chest-system.
+--     `stack_path`    : Filename of the document that
+--                       describes the currently known items'
+--                       stack sizes.
+--     `stack`         : Associative table that associates
+--                       an item name with a stack size.
+--                       (key: item name; value: stack size)
+function Inventory.new(inputs, contents_path, stack_path)
     local self = setmetatable({
-        inputs             = inputs,
-        filename           = filename,
-        stack              = nil,
-        stack_filename     = stack_filename,
-        contents           = nil
+        inputs         = inputs,
+        contents_path  = contents_path,
+        contents       = nil,
+        stack_path     = stack_path,
+        stack          = nil
     }, Inventory)
     return self
 end
@@ -26,7 +40,7 @@ end
 -- TODO: clean up this
 function Inventory:load_stack()
     if self.stack then return end
-    local file = io.open(self.stack_filename)
+    local file = io.open(self.stack_path)
     if not file then self.stack = {} return end
     local text = file:read('a')
     self.stack = textutils.unserialize(text) or {}
@@ -35,7 +49,7 @@ end
 function Inventory:load(noscan)
     self:load_stack()
     if self.contents then return end
-    local file = io.open(self.filename)
+    local file = io.open(self.contents_path)
     if file then
         self.contents = chest_parser.read_from_file(file)
         if not noscan then
@@ -150,6 +164,7 @@ end
 -- Executes a given list of item-moving plans
 -- and updates the affected inventories' databases.
 function Inventory:carry_out(plans)
+    -- Move the specified items
     self:execute_plans(plans)
     
     -- Update affected chests in memory
@@ -161,11 +176,19 @@ function Inventory:carry_out(plans)
 
     -- Update chest database file
     if #affected > 0 then
-        print("saving to file", self.filename)
+        print("saving to file", self.contents_path)
         self:save_contents()
     end
 end
 
+-- Iterates over each chest contained in the
+-- contents database in memory,
+-- and calls `func` for each one in parallel.
+--
+-- `func`: a function that takes two parameters:
+--     -> `chest_id`: a string
+--     -> `contents`: an associative table containing
+--                    slots as keys and items as values
 function Inventory:for_each_chest(func)
     local tasks = {}
     for chest_id, contents in pairs(self.contents) do
@@ -178,6 +201,8 @@ function Inventory:for_each_chest(func)
     parallel.waitForAll(table.unpack(tasks))
 end
 
+-- Wrapper for `for_each_chest` that only calls
+-- `func` for a given chest if it is an input chest.
 function Inventory:for_each_input_chest(func)
     local f = function(chest_id, contents)
         if self:is_input_chest(chest_id) then
@@ -187,6 +212,8 @@ function Inventory:for_each_input_chest(func)
     self:for_each_chest(f)
 end
 
+-- Wrapper for `for_each_chest` that only calls
+-- `func` for a given chest if it is an output chest.
 function Inventory:for_each_output_chest(func)
     local f = function(chest_id, contents)
         if not self:is_input_chest(chest_id) then
@@ -196,6 +223,13 @@ function Inventory:for_each_output_chest(func)
     self:for_each_chest(f)
 end
 
+-- Iterates over `contents`'s items (each filled slot),
+-- calling `func` with each iteration in parallel.
+--
+--     `func`: a function that takes three parameters:
+--         -> `chest_id`: the current chest's id as context
+--         -> `slot`    : the current slot's index
+--         -> `item`    : the current item
 function Inventory:for_each_slot_in(chest_id, contents, func)
     local tasks = {}
     for slot, item in pairs(contents.items) do
@@ -208,6 +242,7 @@ function Inventory:for_each_slot_in(chest_id, contents, func)
     parallel.waitForAll(table.unpack(tasks))
 end
 
+-- Wrapper that iterates over each input chest's slots.
 function Inventory:for_each_input_slot(func)
     local f = function(chest_id, contents)
         self:for_each_slot_in(chest_id, contents, func)
@@ -215,6 +250,7 @@ function Inventory:for_each_input_slot(func)
     self:for_each_input_chest(f)
 end
 
+-- Wrapper that iterates over each output chest's slots.
 function Inventory:for_each_output_slot(func)
     local f = function(chest_id, contents)
         self:for_each_slot_in(chest_id, contents, func)
@@ -225,7 +261,7 @@ end
 -- TODO: clean up this
 function Inventory:update_stacksize()
     self:load()
-    local file = io.open(self.stack_filename, 'w')
+    local file = io.open(self.stack_path, 'w')
     if not file then return end
     local item_equality = function(a, b)
         return a.name == b.name
@@ -315,7 +351,7 @@ function Inventory:update_chests(chest_list, start_, end_)
 end
 
 function Inventory:save_contents()
-    chest_parser.write_to_file(self.contents, self.filename)
+    chest_parser.write_to_file(self.contents, self.contents_path)
 end
 
 return Inventory
