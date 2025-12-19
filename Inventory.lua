@@ -132,17 +132,29 @@ end
 -- Executes a plan to move an item between two chests
 --
 -- `plan` table's named members:
---   `src`: identifies the source chest by id
---   `dst`: identifies the destination chest by id
+--   `src`     : identifies the source chest by id
+--   `dst`     : identifies the destination chest by id
 --   `src_slot`: identifies an item by its occupied slot
 --               to be moved from `src` into `dst`
+--   `count`   : the count of items to move
+--               (optional)
+--   `dst_slot`: the destination slot to move the item into
+--               (optional)
 function Inventory:execute_plan(plan)
     local src      = plan.src
     local dst      = plan.dst
     local src_slot = plan.src_slot
+    local count    = plan.count
+    local dst_slot = plan.dst_slot
 
     local src_chest = peripheral.wrap(src)
-    src_chest.pushItems(dst, src_slot)
+    if count == nil then
+        src_chest.pushItems(dst, src_slot)
+    elseif dst_slot == nil then
+        src_chest.pushItems(dst, src_slot, count)
+    else
+        src_chest.pushItems(dst, src_slot, count, dst_slot)
+    end
 end
 
 -- Execute a list of plans in parallel
@@ -165,6 +177,10 @@ end
 --   `dst`: identifies the destination chest by id
 --   `src_slot`: identifies an item by its occupied slot
 --               to be moved from `src` into `dst`
+--   `count`   : the count of items to move
+--               (optional)
+--   `dst_slot`: the destination slot to move the item into
+--               (optional)
 function Inventory:get_affected_chests(plans)
     local affected = {}
     for _, plan in ipairs(plans) do
@@ -296,7 +312,7 @@ end
 function Inventory:push()
     self:update_stacksize()
     local plans = push.get_push_plans(self)
-    --self:carry_out(plans)
+    self:carry_out(plans)
 end
 
 -- Pull items from the output chests into the input chests.
