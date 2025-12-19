@@ -182,35 +182,40 @@ function push.get_existing_slot_filling_plans(self, contents)
     return plans
 end
 
+function push.get_empty_slot_filling_plans(self, contents)
+    local plans = {}
+    local dst_ids, dst_slots = push.get_nonfull_output_chests(self)
+    local src_i = 1
+    local dst_i = 1
+    while src_i <= #self.inputs and dst_i <= #dst_ids do
+        local src = self.inputs[src_i]
+        local src_data = contents[src]
+        for src_slot, item in pairs(src_data.items) do
+            local dst = dst_ids[dst_i]
+            local plan = {
+                src      = src,
+                dst      = dst,
+                src_slot = src_slot
+            }
+            table.insert(plans, plan)
+            dst_slots[dst_i] = dst_slots[dst_i] - 1
+            if dst_slots[dst_i] == 0 then
+                dst_i = dst_i + 1
+            end
+            if dst_i > #dst_ids then break end
+        end
+        src_i = src_i + 1
+    end
+    return plans
+end
+
 function push.get_push_plans(self)
     self:load()
     local contents = deepcopy(self.contents)
-    local plans = push.get_existing_slot_filling_plans(self, contents)
-    --local dsts, dst_frees  = push.get_nonfull_output_chests(self)
-
+    local plans     = push.get_existing_slot_filling_plans(self, contents)
+    local tmp_plans = push.get_empty_slot_filling_plans(self, contents)
+    table.move(tmp_plans, 1, #tmp_plans, #plans, plans)
     print_plans(plans)
---    local dst_ids, dst_slots = push.get_viable_push_chests(self)
---    local src_i = 1
---    local dst_i = 1
---    while src_i <= #self.inputs and dst_i <= #dst_ids do
---        local src = self.inputs[src_i]
---        local src_data = self.contents[src]
---        for src_slot, item in pairs(src_data.items) do
---            local dst = dst_ids[dst_i]
---            local plan = {
---                src      = src,
---                dst      = dst,
---                src_slot = src_slot
---            }
---            table.insert(plans, plan)
---            dst_slots[dst_i] = dst_slots[dst_i] - 1
---            if dst_slots[dst_i] == 0 then
---                dst_i = dst_i + 1
---            end
---            if dst_i > #dst_ids then break end
---        end
---        src_i = src_i + 1
---    end
     return plans
 end
 
