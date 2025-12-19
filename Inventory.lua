@@ -1,5 +1,7 @@
 local tbl          = require("utils.table_utils")
 local chest_parser = require("utils.chest_parser")
+local cfg          = require("utils.config_reader")
+local configure    = require("configure")
 
 local push      = require("cmd.push")
 local pull      = require("cmd.pull")
@@ -14,6 +16,8 @@ Inventory.__index = Inventory
 
 -- Constructs and returns a new instance of Inventory
 -- Named fields:
+--     `inputs_path`   : Filename of the document that
+--                       lists the chest IDs of input chests.
 --     `inputs`        : Array of input chest IDs.
 --     `contents_path` : Filename of the document that
 --                       lists the current state of the
@@ -26,15 +30,28 @@ Inventory.__index = Inventory
 --     `stack`         : Associative table that associates
 --                       an item name with a stack size.
 --                       (key: item name; value: stack size)
-function Inventory.new(inputs, contents_path, stack_path)
+function Inventory.new(inputs_path, contents_path, stack_path)
     local self = setmetatable({
-        inputs         = inputs,
+        inputs_path    = inputs_path,
+        inputs         = nil,
         contents_path  = contents_path,
         contents       = nil,
         stack_path     = stack_path,
         stack          = nil
     }, Inventory)
+    self:load_inputs()
     return self
+end
+
+-- Try to load input file contents.
+-- If the file doesn't exist or its format is unreadable,
+-- prompts the user to reconfigure input chest bindings.
+function Inventory:load_inputs()
+    if not fs.exists(self.inputs_path)
+    or not cfg.is_valid_seque_file(self.inputs_path) then
+        configure.run(self.inputs_path)
+    end
+    self.inputs = cfg.read_seque(self.inputs_path, "")
 end
 
 -- TODO: clean up this

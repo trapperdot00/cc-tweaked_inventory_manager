@@ -18,28 +18,19 @@ local function print_help()
     print("         --find=<item1>[,<itemN>]...")
 end
 
-local function load_inputs(inputs_file)
-    if not fs.exists(inputs_file) or
-    not cfg.is_valid_seque_file(inputs_file) then
-        configure.run(inputs_file)
-    end
-    return cfg.read_seque(inputs_file, "")
-end
-
 function work_delegator.delegate
-(options, inputs_file, inventory_file, stack_file)
+(options, inputs_path, contents_path, stack_path)
     if not options:valid() then
         print_help()
         return
     end
 
     if options.conf then
-        configure.run(inputs_file)
+        configure.run(inputs_path)
         return
     end
 
-    local inputs    = load_inputs(inputs_file)
-    local inventory = Inventory.new(inputs, inventory_file, stack_file)
+    local inventory = Inventory.new(inputs_path, contents_path, stack_path)
 
     -- Non-exclusive flags
     if options.scan then
