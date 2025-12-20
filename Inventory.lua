@@ -164,6 +164,10 @@ function Inventory:execute_plans(plans)
         table.insert(tasks,
             function() self:execute_plan(plan) end
         )
+        if #tasks == 100 then
+            parallel.waitForAll(table.unpack(tasks))
+            tasks = {}
+        end
     end
     parallel.waitForAll(table.unpack(tasks))
 end
@@ -264,15 +268,9 @@ end
 --         -> `slot`    : the current slot's index
 --         -> `item`    : the current item
 function Inventory:for_each_slot_in(chest_id, contents, func)
-    local tasks = {}
     for slot, item in pairs(contents.items) do
-        table.insert(tasks,
-            function()
-                func(chest_id, slot, item)
-            end
-        )
+        func(chest_id, slot, item)
     end
-    parallel.waitForAll(table.unpack(tasks))
 end
 
 -- Wrapper that iterates over each input chest's slots.
