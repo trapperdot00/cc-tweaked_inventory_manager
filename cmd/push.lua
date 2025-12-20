@@ -81,40 +81,6 @@ function push.get_input_item_slots(self)
     return input_item_slots
 end
 
-local function print_input_item_slots(input_item_slots)
-    for item, chests in pairs(input_item_slots) do
-        print(item)
-        for chest_id, slots in pairs(chests) do
-            print("  in: "..chest_id, table.unpack(slots))
-        end
-    end
-end
-
-local function print_item_dsts(item_dsts)
-    for item_name, dsts in pairs(item_dsts) do
-        print(item_name)
-        for dst_id, dst_slots in pairs(dsts) do
-            print("  "..dst_id, table.unpack(dst_slots))
-        end
-    end
-end
-
-local function print_dsts_dst_frees(dsts, dst_frees)
-    for i = 1, #dsts do
-        print(dsts[i], dst_frees[i])
-    end
-end
-
-local function print_plan(plan)
-    print(plan.src, '[', plan.src_slot, "] ->", plan.dst, "[", plan.dst_slot, "] {", plan.count, "}")
-end
-
-local function print_plans(plans)
-    for _, plan in ipairs(plans) do
-        print_plan(plan)
-    end
-end
-
 function deepcopy(orig, copies)
     copies = copies or {}
     local orig_type = type(orig)
@@ -215,7 +181,6 @@ function push.get_push_plans(self)
     local plans     = push.get_existing_slot_filling_plans(self, contents)
     local tmp_plans = push.get_empty_slot_filling_plans(self, contents)
     table.move(tmp_plans, 1, #tmp_plans, #plans + 1, plans)
-    print_plans(plans)
     return plans
 end
 
