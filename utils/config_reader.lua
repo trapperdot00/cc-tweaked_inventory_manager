@@ -160,6 +160,7 @@ function config_reader.read_assoc(filename, key_prefix)
         local comma = config_reader.read_next_nonspace_char(file)
         if comma ~= "," then break end
     end
+    file:close()
     return conf
 end
 
@@ -193,6 +194,7 @@ function config_reader.read_seque(filename, key_prefix)
     if ender ~= "}" then
         error("expected } to close sequential file \""..filename.."\" (got '"..ender.."')")
     end
+    file:close()
     return conf
 end
 
@@ -222,6 +224,7 @@ function config_reader.write_seque(seque, filename)
         file:write("    \"" .. item .. '"')
     end
     file:write("\n}")
+    file:close()
 end
 
 return config_reader

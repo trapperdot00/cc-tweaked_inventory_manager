@@ -60,6 +60,7 @@ function Inventory:load_stack()
     local file = io.open(self.stacks_path)
     if not file then self.stacks = {} return end
     local text = file:read('a')
+    file:close()
     self.stacks = textutils.unserialize(text) or {}
 end
 
@@ -69,6 +70,7 @@ function Inventory:load(noscan)
     local file = io.open(self.contents_path)
     if file then
         self.contents = chest_parser.read_from_file(file)
+        file:close()
         if not noscan then
             self:scan_inputs()
         end
@@ -304,6 +306,7 @@ function Inventory:update_stacksize()
     end
     self:for_each_input_slot(func)
     file:write(textutils.serialize(self.stacks))
+    file:close()
 end
 
 -- Push items from the input chests into the output chests.

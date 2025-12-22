@@ -84,9 +84,13 @@ function table_utils.deepcopy(orig, copies)
             copy = {}
             copies[orig] = copy
             for orig_key, orig_value in next, orig, nil do
-                copy[deepcopy(orig_key, copies)] = deepcopy(orig_value, copies)
+                copy[table_utils.deepcopy(orig_key, copies)] =
+                    table_utils.deepcopy(orig_value, copies)
             end
-            setmetatable(copy, deepcopy(getmetatable(orig), copies))
+            setmetatable(
+                copy,
+                table_utils.deepcopy(getmetatable(orig), copies)
+            )
         end
     else
         copy = orig
