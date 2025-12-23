@@ -11,10 +11,10 @@ local get       = require("src.cmd.get")
 local count     = require("src.cmd.count")
 local find      = require("src.cmd.find")
 
-local Inventory = {}
-Inventory.__index = Inventory
+local inventory = {}
+inventory.__index = inventory
 
--- Constructs and returns a new instance of Inventory
+-- Constructs and returns a new instance of inventory
 -- Named fields:
 --     `contents_path`: Filename of the document that
 --                      lists the current state of the
@@ -30,7 +30,7 @@ Inventory.__index = Inventory
 --     `stacks`       : Associative table that associates
 --                      an item name with a stack size.
 --                      (key: item name; value: stack size)
-function Inventory.new(contents_path, inputs_path, stacks_path)
+function inventory.new(contents_path, inputs_path, stacks_path)
     local self = setmetatable({
         contents_path = contents_path,
         contents      = nil,
@@ -38,7 +38,7 @@ function Inventory.new(contents_path, inputs_path, stacks_path)
         inputs        = nil,
         stacks_path   = stacks_path,
         stacks        = nil
-    }, Inventory)
+    }, inventory)
     self:load_inputs()
     return self
 end
@@ -46,7 +46,7 @@ end
 -- Try to load input file contents.
 -- If the file doesn't exist or its format is unreadable,
 -- prompts the user to reconfigure input chest bindings.
-function Inventory:load_inputs()
+function inventory:load_inputs()
     if not fs.exists(self.inputs_path)
     or not cfg.is_valid_seque_file(self.inputs_path) then
         configure.run(self.inputs_path)
@@ -55,7 +55,7 @@ function Inventory:load_inputs()
 end
 
 -- TODO: clean up this
-function Inventory:load_stack()
+function inventory:load_stack()
     if self.stacks then return end
     local file = io.open(self.stacks_path)
     if not file then self.stacks = {} return end
@@ -64,7 +64,7 @@ function Inventory:load_stack()
     self.stacks = textutils.unserialize(text) or {}
 end
 
-function Inventory:load(noscan)
+function inventory:load(noscan)
     self:load_stack()
     if self.contents then return end
     local file = io.open(self.contents_path)
@@ -81,7 +81,7 @@ end
 
 -- Returns the capacity of the given
 -- inventory entity referred to as an ID in slots
-function Inventory:get_slot_size(chest_id)
+function inventory:get_slot_size(chest_id)
     local chest_data = self.contents[chest_id]
     local chest_size = chest_data.size
     return chest_size
@@ -89,7 +89,7 @@ end
 
 -- Returns the count of occupied slots
 -- of the given inventory object referred to as an ID
-function Inventory:get_full_slots(chest_id)
+function inventory:get_full_slots(chest_id)
     local chest_data  = self.contents[chest_id]
     local chest_items = chest_data.items
     local full_slots = tbl.size(chest_items)
@@ -98,7 +98,7 @@ end
 
 -- Returns the non-occupied/free slots
 -- of the given inventory entity referred to as an ID
-function Inventory:get_free_slots(chest_id)
+function inventory:get_free_slots(chest_id)
     local slot_size  = self:get_slot_size(chest_id)
     local full_slots = self:get_full_slots(chest_id)
     local free_slots = slot_size - full_slots
@@ -109,7 +109,7 @@ end
 -- referred to as an ID
 --  -> has only occupied/full slots
 --  -> has no more unoccupied/free slots
-function Inventory:is_full(chest_id)
+function inventory:is_full(chest_id)
     local slot_size  = self:get_slot_size(chest_id)
     local full_slots = self:get_full_slots(chest_id)
     return slot_size == full_slots
@@ -119,7 +119,7 @@ end
 -- referred to as an ID
 --  -> has only unoccupied/free slots
 --  -> has no occupied/full slots
-function Inventory:is_empty(chest_id)
+function inventory:is_empty(chest_id)
     local full_slots = self:get_full_slots(chest_id)
     return full_slots == 0
 end
@@ -127,7 +127,7 @@ end
 -- Checks whether the given inventory entity
 -- referred to as an ID
 -- is labeled as an input chest
-function Inventory:is_input_chest(chest_id)
+function inventory:is_input_chest(chest_id)
     return tbl.contains(self.inputs, chest_id)
 end
 
@@ -142,7 +142,7 @@ end
 --               (optional)
 --   `dst_slot`: the destination slot to move the item into
 --               (optional)
-function Inventory:execute_plan(plan)
+function inventory:execute_plan(plan)
     local src      = plan.src
     local dst      = plan.dst
     local src_slot = plan.src_slot
@@ -160,7 +160,7 @@ function Inventory:execute_plan(plan)
 end
 
 -- Execute a list of plans in parallel
-function Inventory:execute_plans(plans)
+function inventory:execute_plans(plans)
     local tasks = {}
     for _, plan in ipairs(plans) do
         table.insert(tasks,
@@ -187,7 +187,7 @@ end
 --               (optional)
 --   `dst_slot`: the destination slot to move the item into
 --               (optional)
-function Inventory:get_affected_chests(plans)
+function inventory:get_affected_chests(plans)
     local affected = {}
     for _, plan in ipairs(plans) do
         if not tbl.contains(affected, plan.src) then
@@ -202,7 +202,7 @@ end
 
 -- Executes a given list of item-moving plans
 -- and updates the affected inventories' databases.
-function Inventory:carry_out(plans)
+function inventory:carry_out(plans)
     -- Move the specified items
     self:execute_plans(plans)
     
@@ -228,7 +228,7 @@ end
 --     -> `chest_id`: a string
 --     -> `contents`: an associative table containing
 --                    slots as keys and items as values
-function Inventory:for_each_chest(func)
+function inventory:for_each_chest(func)
     local tasks = {}
     for chest_id, contents in pairs(self.contents) do
         table.insert(tasks,
@@ -242,7 +242,7 @@ end
 
 -- Wrapper for `for_each_chest` that only calls
 -- `func` for a given chest if it is an input chest.
-function Inventory:for_each_input_chest(func)
+function inventory:for_each_input_chest(func)
     local f = function(chest_id, contents)
         if self:is_input_chest(chest_id) then
             func(chest_id, contents)
@@ -253,7 +253,7 @@ end
 
 -- Wrapper for `for_each_chest` that only calls
 -- `func` for a given chest if it is an output chest.
-function Inventory:for_each_output_chest(func)
+function inventory:for_each_output_chest(func)
     local f = function(chest_id, contents)
         if not self:is_input_chest(chest_id) then
             func(chest_id, contents)
@@ -269,14 +269,14 @@ end
 --         -> `chest_id`: the current chest's id as context
 --         -> `slot`    : the current slot's index
 --         -> `item`    : the current item
-function Inventory:for_each_slot_in(chest_id, contents, func)
+function inventory:for_each_slot_in(chest_id, contents, func)
     for slot, item in pairs(contents.items) do
         func(chest_id, slot, item)
     end
 end
 
 -- Wrapper that iterates over each input chest's slots.
-function Inventory:for_each_input_slot(func)
+function inventory:for_each_input_slot(func)
     local f = function(chest_id, contents)
         self:for_each_slot_in(chest_id, contents, func)
     end
@@ -284,7 +284,7 @@ function Inventory:for_each_input_slot(func)
 end
 
 -- Wrapper that iterates over each output chest's slots.
-function Inventory:for_each_output_slot(func)
+function inventory:for_each_output_slot(func)
     local f = function(chest_id, contents)
         self:for_each_slot_in(chest_id, contents, func)
     end
@@ -292,7 +292,7 @@ function Inventory:for_each_output_slot(func)
 end
 
 -- TODO: clean up this
-function Inventory:update_stacksize()
+function inventory:update_stacksize()
     self:load()
     local file = io.open(self.stacks_path, 'w')
     if not file then return end
@@ -310,19 +310,19 @@ function Inventory:update_stacksize()
 end
 
 -- Push items from the input chests into the output chests.
-function Inventory:push()
+function inventory:push()
     self:update_stacksize()
     local plans = push.get_push_plans(self)
     self:carry_out(plans)
 end
 
 -- Pull items from the output chests into the input chests.
-function Inventory:pull()
+function inventory:pull()
     local plans = pull.get_pull_plans(self)
     self:carry_out(plans)
 end
 
-function Inventory:size()
+function inventory:size()
     local in_slots, out_slots = size.size(self)
     local full_slots = in_slots + out_slots
     print("[IN] :", in_slots)
@@ -330,7 +330,7 @@ function Inventory:size()
     print("[ALL]:", full_slots)
 end
 
-function Inventory:usage()
+function inventory:usage()
     local total, used = usage.usage(self)
     local percent = (used / total) * 100
     print("[USED]:", used)
@@ -338,19 +338,19 @@ function Inventory:usage()
     print("["..tostring(percent).."%]")
 end
 
-function Inventory:get(sought_items)
+function inventory:get(sought_items)
     local plans = get.get_get_plans(self, sought_items)
     self:carry_out(plans)
 end
 
-function Inventory:count(sought_items)
+function inventory:count(sought_items)
     for _, item in ipairs(sought_items) do
         local cnt = count.count(self, item)
         print(item, cnt)
     end
 end
 
-function Inventory:find(sought_items)
+function inventory:find(sought_items)
     for _, item in ipairs(sought_items) do
         local chests = find.find(self, item)
         for _, chest_id in ipairs(chests) do
@@ -359,24 +359,24 @@ function Inventory:find(sought_items)
     end
 end
 
-function Inventory:scan()
+function inventory:scan()
     self.contents = chest_parser.read_from_chests()
     self:save_contents()
 end
 
-function Inventory:scan_inputs()
+function inventory:scan_inputs()
     for _, chest_name in ipairs(self.inputs) do
         self:update_chest(chest_name)
     end
 end
 
-function Inventory:update_chest(chest_id)
+function inventory:update_chest(chest_id)
     local chest = peripheral.wrap(chest_id)
     local chest_data = { size = chest.size(), items = chest.list() }
     self.contents[chest_id] = chest_data
 end
 
-function Inventory:update_chests(chest_list, start_, end_)
+function inventory:update_chests(chest_list, start_, end_)
     for i = start_, end_ do
         local chest_name = chest_list[i]
         print("Updating " .. chest_name)
@@ -384,8 +384,8 @@ function Inventory:update_chests(chest_list, start_, end_)
     end
 end
 
-function Inventory:save_contents()
+function inventory:save_contents()
     chest_parser.write_to_file(self.contents, self.contents_path)
 end
 
-return Inventory
+return inventory

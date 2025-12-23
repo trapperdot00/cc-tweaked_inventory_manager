@@ -1,13 +1,9 @@
 local debugger          = require("utils.debugger")
 local configure         = require("src.configure")
 local cfg               = require("utils.config_reader")
-local Inventory         = require("src.Inventory")
+local inventory         = require("src.inventory")
 
 local work_delegator    = {}
-
-local function print_inputs(inventory)
-    debugger.print_seque(inventory.inputs)
-end
 
 local function print_help()
     print("usage: " .. arg[0] .. " [options]")
@@ -31,30 +27,30 @@ function work_delegator.delegate
         return
     end
 
-    local inventory = Inventory.new(
+    local inv = inventory.new(
         contents_path, inputs_path, stacks_path
     )
 
     -- Handle non-exclusive flags
     if options.scan then
-        inventory:scan()
+        inv:scan()
     end
 
     -- Handle exclusive flags
     if options.push then
-        inventory:push()
+        inv:push()
     elseif options.pull then
-        inventory:pull()
+        inv:pull()
     elseif options.size then
-        inventory:size()
+        inv:size()
     elseif options.usage then
-        inventory:usage()
+        inv:usage()
     elseif #options.get > 0 then
-        inventory:get(options.get)
+        inv:get(options.get)
     elseif #options.count > 0 then
-        inventory:count(options.count)
+        inv:count(options.count)
     elseif #options.find > 0 then
-        inventory:find(options.find)
+        inv:find(options.find)
     end
 end
 
