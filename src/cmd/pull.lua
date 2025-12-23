@@ -6,7 +6,7 @@ function pull.get_viable_pull_chests(self)
     local output_names = {}
     local output_slots = {}
     for chest_name, contents in pairs(self.contents.data) do
-        if self:is_input_chest(chest_name) then
+        if self.inputs:is_input_chest(chest_name) then
             if not self.contents:is_full(chest_name) then
                 local empty_slots = self.contents:get_free_slots(chest_name)
                 table.insert(input_names, chest_name)

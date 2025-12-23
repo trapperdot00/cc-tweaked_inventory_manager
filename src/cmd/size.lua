@@ -6,7 +6,7 @@ function size.size(self)
     local out_slots = 0
     for chest_id, contents in pairs(self.contents.data) do
         local slots = contents.size
-        if self:is_input_chest(chest_id) then
+        if self.inputs:is_input_chest(chest_id) then
             in_slots = in_slots + slots
         else
             out_slots = out_slots + slots

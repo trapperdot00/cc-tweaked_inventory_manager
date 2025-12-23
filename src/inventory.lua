@@ -1,5 +1,5 @@
-local tbl       = require("utils.table_utils")
 local cont      = require("src.contents")
+local inp       = require("src.inputs")
 local cfg       = require("utils.config_reader")
 local configure = require("src.configure")
 local plan      = require("src.plan")
@@ -34,25 +34,12 @@ function inventory.new
 (contents_path, inputs_path, stacks_path)
     local self = setmetatable({
         contents      = cont.new(contents_path),
-        inputs_path   = inputs_path,
-        inputs        = nil,
+        inputs        = inp.new(inputs_path),
         stacks_path   = stacks_path,
         stacks        = nil
     }, inventory)
-    self:load_inputs()
+    self.inputs:load()
     return self
-end
-
--- Try to load input file contents.
--- If the file doesn't exist
--- or its format is unreadable,
--- prompts the user to configure bindings.
-function inventory:load_inputs()
-    if not fs.exists(self.inputs_path)
-    or not cfg.is_valid_seque_file(self.inputs_path) then
-        configure.run(self.inputs_path)
-    end
-    self.inputs = cfg.read_seque(self.inputs_path, "")
 end
 
 -- TODO: clean up this
@@ -71,13 +58,6 @@ function inventory:load(noscan)
     if not noscan then
         self:scan_inputs()
     end
-end
-
--- Checks whether the given inventory entity
--- referred to as an ID
--- is labeled as an input chest
-function inventory:is_input_chest(chest_id)
-    return tbl.contains(self.inputs, chest_id)
 end
 
 -- Executes a given list of item-moving plans
@@ -105,7 +85,7 @@ end
 -- `func` for a given chest if it is an input chest.
 function inventory:for_each_input_chest(func)
     local f = function(chest_id, contents)
-        if self:is_input_chest(chest_id) then
+        if self.inputs:is_input_chest(chest_id) then
             func(chest_id, contents)
         end
     end
@@ -116,14 +96,15 @@ end
 -- `func` for a given chest if it is an output chest.
 function inventory:for_each_output_chest(func)
     local f = function(chest_id, contents)
-        if not self:is_input_chest(chest_id) then
+        if not self.inputs:is_input_chest(chest_id) then
             func(chest_id, contents)
         end
     end
     self.contents:for_each_chest(f)
 end
 
--- Wrapper that iterates over each input chest's slots.
+-- Wrapper that iterates over
+-- each input chest's slots.
 function inventory:for_each_input_slot(func)
     local f = function(chest_id, contents)
         self.contents:for_each_slot_in(
@@ -133,7 +114,8 @@ function inventory:for_each_input_slot(func)
     self:for_each_input_chest(f)
 end
 
--- Wrapper that iterates over each output chest's slots.
+-- Wrapper that iterates over
+-- each output chest's slots.
 function inventory:for_each_output_slot(func)
     local f = function(chest_id, contents)
         self.contents:for_each_slot_in(
@@ -218,8 +200,8 @@ function inventory:scan()
 end
 
 function inventory:scan_inputs()
-    for _, chest_name in ipairs(self.inputs) do
-        self.contents:update(chest_name)
+    for _, inv_id in ipairs(self.inputs.data) do
+        self.contents:update(inv_id)
     end
 end
 

@@ -4,7 +4,7 @@ function get.get_output_chests_containing(self, sought_items)
     local output_names = {}
     local output_slots = {}
     for chest_name, contents in pairs(self.contents.data) do
-        if not self:is_input_chest(chest_name) then
+        if not self.inputs:is_input_chest(chest_name) then
             local slots = {}
             for slot, item in pairs(contents.items) do
                 for _, sought_item in ipairs(sought_items) do
@@ -27,7 +27,7 @@ end
 function get.get_nonfull_input_chests(self)
     local input_names = {}
     local input_slots = {}
-    for _, input_name in ipairs(self.inputs) do
+    for _, input_name in ipairs(self.inputs.data) do
         local free_slots = self.contents:get_free_slots(input_name)
         if not self.contents:is_full(input_name) then
             table.insert(input_names, input_name)

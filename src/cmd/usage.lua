@@ -5,7 +5,7 @@ function usage.usage(self)
     local total = 0
     local used  = 0
     for chest_id, _ in pairs(self.contents.data) do
-        if self:is_input_chest(chest_id) then goto next_chest end
+        if self.inputs:is_input_chest(chest_id) then goto next_chest end
         local size = self.contents:get_slot_size(chest_id)
         local full = self.contents:get_full_slots(chest_id)
         total = total + size

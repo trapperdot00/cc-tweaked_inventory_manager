@@ -12,7 +12,7 @@ function push.get_nonfull_output_chests(self)
     local output_names    = {}
     local free_slots_list = {}
     for output_name, contents in pairs(self.contents.data) do
-        if not self:is_input_chest(output_name) then
+        if not self.inputs:is_input_chest(output_name) then
             local free_slots = self.contents:get_free_slots(output_name)
             if free_slots > 0 then
                 table.insert(output_names, output_name)
@@ -31,14 +31,14 @@ end
 function push.get_nonfull_viable_output_slots(self)
     local item_dst = {}
     for chest_id, contents in pairs(self.contents.data) do
-        if not self:is_input_chest(chest_id) then
+        if not self.inputs:is_input_chest(chest_id) then
             goto next_chest
         end
         for slot, item in pairs(contents.items) do
             local maxCount = self.stacks[item.name]
             local dsts = {}
             for dst_id, dst_contents in pairs(self.contents.data) do
-                if self:is_input_chest(dst_id) then
+                if self.inputs:is_input_chest(dst_id) then
                     goto next_dst
                 end
                 for dst_slot, dst_item in pairs(dst_contents.items) do
@@ -189,8 +189,8 @@ function push.get_empty_slot_filling_plans(self, contents)
     local dst_ids, dst_slots = push.get_nonfull_output_chests(self)
     local src_i = 1
     local dst_i = 1
-    while src_i <= #self.inputs and dst_i <= #dst_ids do
-        local src = self.inputs[src_i]
+    while src_i <= #self.inputs.data and dst_i <= #dst_ids do
+        local src = self.inputs.data[src_i]
         local src_data = contents[src]
         for src_slot, item in pairs(src_data.items) do
             local dst = dst_ids[dst_i]
