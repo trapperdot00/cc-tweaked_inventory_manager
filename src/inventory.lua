@@ -1,7 +1,8 @@
-local tbl          = require("utils.table_utils")
-local cont         = require("src.contents")
-local cfg          = require("utils.config_reader")
-local configure    = require("src.configure")
+local tbl       = require("utils.table_utils")
+local cont      = require("src.contents")
+local cfg       = require("utils.config_reader")
+local configure = require("src.configure")
+local plan      = require("src.plan")
 
 local push      = require("src.cmd.push")
 local pull      = require("src.cmd.pull")
@@ -14,23 +15,23 @@ local find      = require("src.cmd.find")
 local inventory = {}
 inventory.__index = inventory
 
--- Constructs and returns a new instance of inventory
--- Named fields:
---     `contents_path`: Filename of the document that
---                      lists the current state of the
---                      managed chest-system.
---     `contents`     : Table that keeps track of the current
---                      state of the managed chest-system.
---     `inputs_path`  : Filename of the document that
---                      lists the chest IDs of input chests.
---     `inputs`       : Array of input chest IDs.
---     `stacks_path`  : Filename of the document that
---                      describes the currently known items'
---                      stack sizes.
---     `stacks`       : Associative table that associates
---                      an item name with a stack size.
---                      (key: item name; value: stack size)
-function inventory.new(contents_path, inputs_path, stacks_path)
+-- Constructs and returns a new instance
+-- of inventory
+-- Fields:
+--   `contents`   : An instance of contents
+--                  that keeps track of the
+--                  inventory contents.
+--   `inputs_path`: Filename of the document
+--                  that lists the IDs of 
+--                  the input peripherals.
+--   `inputs`     : Array of input peripheral IDs.
+--   `stacks_path`: Filename of the document that
+--                  describes the known items'
+--                  stack sizes.
+--   `stacks`     : Associative table that maps
+--                  an item name to a stack size.
+function inventory.new
+(contents_path, inputs_path, stacks_path)
     local self = setmetatable({
         contents      = cont.new(contents_path),
         inputs_path   = inputs_path,
@@ -43,8 +44,9 @@ function inventory.new(contents_path, inputs_path, stacks_path)
 end
 
 -- Try to load input file contents.
--- If the file doesn't exist or its format is unreadable,
--- prompts the user to reconfigure input chest bindings.
+-- If the file doesn't exist
+-- or its format is unreadable,
+-- prompts the user to configure bindings.
 function inventory:load_inputs()
     if not fs.exists(self.inputs_path)
     or not cfg.is_valid_seque_file(self.inputs_path) then
@@ -78,83 +80,15 @@ function inventory:is_input_chest(chest_id)
     return tbl.contains(self.inputs, chest_id)
 end
 
--- Executes a plan to move an item between two chests
---
--- `plan` table's named members:
---   `src`     : identifies the source chest by id
---   `dst`     : identifies the destination chest by id
---   `src_slot`: identifies an item by its occupied slot
---               to be moved from `src` into `dst`
---   `count`   : the count of items to move
---               (optional)
---   `dst_slot`: the destination slot to move the item into
---               (optional)
-function inventory:execute_plan(plan)
-    local src      = plan.src
-    local dst      = plan.dst
-    local src_slot = plan.src_slot
-    local count    = plan.count
-    local dst_slot = plan.dst_slot
-
-    local src_chest = peripheral.wrap(src)
-    if count == nil then
-        src_chest.pushItems(dst, src_slot)
-    elseif dst_slot == nil then
-        src_chest.pushItems(dst, src_slot, count)
-    else
-        src_chest.pushItems(dst, src_slot, count, dst_slot)
-    end
-end
-
--- Execute a list of plans in parallel
-function inventory:execute_plans(plans)
-    local tasks = {}
-    for _, plan in ipairs(plans) do
-        table.insert(tasks,
-            function() self:execute_plan(plan) end
-        )
-        if #tasks == 100 then
-            parallel.waitForAll(table.unpack(tasks))
-            tasks = {}
-        end
-    end
-    parallel.waitForAll(table.unpack(tasks))
-end
-
--- Returns an array-like table containing
--- the inventory IDs listed inside the given plan-list.
--- The IDs are listed only once.
---
--- `plan` table's named members:
---   `src`: identifies the source chest by id
---   `dst`: identifies the destination chest by id
---   `src_slot`: identifies an item by its occupied slot
---               to be moved from `src` into `dst`
---   `count`   : the count of items to move
---               (optional)
---   `dst_slot`: the destination slot to move the item into
---               (optional)
-function inventory:get_affected_chests(plans)
-    local affected = {}
-    for _, plan in ipairs(plans) do
-        if not tbl.contains(affected, plan.src) then
-            table.insert(affected, plan.src)
-        end
-        if not tbl.contains(affected, plan.dst) then
-            table.insert(affected, plan.dst)
-        end
-    end
-    return affected
-end
-
 -- Executes a given list of item-moving plans
--- and updates the affected inventories' databases.
+-- and updates the affected
+-- inventories' databases.
 function inventory:carry_out(plans)
     -- Move the specified items
-    self:execute_plans(plans)
+    plan.execute_plans(plans)
     
     -- Update affected chests in memory
-    local affected = self:get_affected_chests(plans)
+    local affected = plan.get_affected_chests(plans)
     for _, id in ipairs(affected) do
         print("updating", id)
         self.contents:update(id)
@@ -227,14 +161,16 @@ function inventory:update_stacksize()
     file:close()
 end
 
--- Push items from the input chests into the output chests.
+-- Push items from the input peripherals
+-- into the output peripherals.
 function inventory:push()
     self:update_stacksize()
     local plans = push.get_push_plans(self)
     self:carry_out(plans)
 end
 
--- Pull items from the output chests into the input chests.
+-- Push items from the output peripherals
+-- into the input peripherals.
 function inventory:pull()
     local plans = pull.get_pull_plans(self)
     self:carry_out(plans)
