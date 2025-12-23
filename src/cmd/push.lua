@@ -11,9 +11,9 @@ local push = {}
 function push.get_nonfull_output_chests(self)
     local output_names    = {}
     local free_slots_list = {}
-    for output_name, contents in pairs(self.contents) do
+    for output_name, contents in pairs(self.contents.data) do
         if not self:is_input_chest(output_name) then
-            local free_slots = self:get_free_slots(output_name)
+            local free_slots = self.contents:get_free_slots(output_name)
             if free_slots > 0 then
                 table.insert(output_names, output_name)
                 table.insert(free_slots_list, free_slots)
@@ -30,14 +30,14 @@ end
 -- (as in item's count not zero and is less than its stack size)
 function push.get_nonfull_viable_output_slots(self)
     local item_dst = {}
-    for chest_id, contents in pairs(self.contents) do
+    for chest_id, contents in pairs(self.contents.data) do
         if not self:is_input_chest(chest_id) then
             goto next_chest
         end
         for slot, item in pairs(contents.items) do
             local maxCount = self.stacks[item.name]
             local dsts = {}
-            for dst_id, dst_contents in pairs(self.contents) do
+            for dst_id, dst_contents in pairs(self.contents.data) do
                 if self:is_input_chest(dst_id) then
                     goto next_dst
                 end
@@ -213,7 +213,7 @@ end
 
 function push.get_push_plans(self)
     self:load()
-    local contents = tbl.deepcopy(self.contents)
+    local contents  = tbl.deepcopy(self.contents.data)
     local plans     = push.get_existing_slot_filling_plans(self, contents)
     local tmp_plans = push.get_empty_slot_filling_plans(self, contents)
     table.move(tmp_plans, 1, #tmp_plans, #plans + 1, plans)

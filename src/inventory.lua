@@ -1,5 +1,5 @@
 local tbl          = require("utils.table_utils")
-local chest_parser = require("utils.chest_parser")
+local cont         = require("src.contents")
 local cfg          = require("utils.config_reader")
 local configure    = require("src.configure")
 
@@ -32,8 +32,7 @@ inventory.__index = inventory
 --                      (key: item name; value: stack size)
 function inventory.new(contents_path, inputs_path, stacks_path)
     local self = setmetatable({
-        contents_path = contents_path,
-        contents      = nil,
+        contents      = cont.new(contents_path),
         inputs_path   = inputs_path,
         inputs        = nil,
         stacks_path   = stacks_path,
@@ -66,62 +65,10 @@ end
 
 function inventory:load(noscan)
     self:load_stack()
-    if self.contents then return end
-    local file = io.open(self.contents_path)
-    if file then
-        self.contents = chest_parser.read_from_file(file)
-        file:close()
-        if not noscan then
-            self:scan_inputs()
-        end
-    else
-        self:scan()
+    self.contents:load() 
+    if not noscan then
+        self:scan_inputs()
     end
-end
-
--- Returns the capacity of the given
--- inventory entity referred to as an ID in slots
-function inventory:get_slot_size(chest_id)
-    local chest_data = self.contents[chest_id]
-    local chest_size = chest_data.size
-    return chest_size
-end
-
--- Returns the count of occupied slots
--- of the given inventory object referred to as an ID
-function inventory:get_full_slots(chest_id)
-    local chest_data  = self.contents[chest_id]
-    local chest_items = chest_data.items
-    local full_slots = tbl.size(chest_items)
-    return full_slots
-end
-
--- Returns the non-occupied/free slots
--- of the given inventory entity referred to as an ID
-function inventory:get_free_slots(chest_id)
-    local slot_size  = self:get_slot_size(chest_id)
-    local full_slots = self:get_full_slots(chest_id)
-    local free_slots = slot_size - full_slots
-    return free_slots
-end
-
--- Returns whether the given inventory entity
--- referred to as an ID
---  -> has only occupied/full slots
---  -> has no more unoccupied/free slots
-function inventory:is_full(chest_id)
-    local slot_size  = self:get_slot_size(chest_id)
-    local full_slots = self:get_full_slots(chest_id)
-    return slot_size == full_slots
-end
-
--- Returns whether the given inventory entity
--- referred to as an ID
---  -> has only unoccupied/free slots
---  -> has no occupied/full slots
-function inventory:is_empty(chest_id)
-    local full_slots = self:get_full_slots(chest_id)
-    return full_slots == 0
 end
 
 -- Checks whether the given inventory entity
@@ -210,34 +157,14 @@ function inventory:carry_out(plans)
     local affected = self:get_affected_chests(plans)
     for _, id in ipairs(affected) do
         print("updating", id)
-        self:update_chest(id)
+        self.contents:update(id)
     end
 
     -- Update chest database file
     if #affected > 0 then
-        print("saving to file", self.contents_path)
-        self:save_contents()
+        print("saving to file", self.contents.filename)
+        self.contents:save_to_file()
     end
-end
-
--- Iterates over each chest contained in the
--- contents database in memory,
--- and calls `func` for each one in parallel.
---
--- `func`: a function that takes two parameters:
---     -> `chest_id`: a string
---     -> `contents`: an associative table containing
---                    slots as keys and items as values
-function inventory:for_each_chest(func)
-    local tasks = {}
-    for chest_id, contents in pairs(self.contents) do
-        table.insert(tasks,
-            function()
-                func(chest_id, contents)
-            end
-        )
-    end
-    parallel.waitForAll(table.unpack(tasks))
 end
 
 -- Wrapper for `for_each_chest` that only calls
@@ -248,7 +175,7 @@ function inventory:for_each_input_chest(func)
             func(chest_id, contents)
         end
     end
-    self:for_each_chest(f)
+    self.contents:for_each_chest(f)
 end
 
 -- Wrapper for `for_each_chest` that only calls
@@ -259,26 +186,15 @@ function inventory:for_each_output_chest(func)
             func(chest_id, contents)
         end
     end
-    self:for_each_chest(f)
-end
-
--- Iterates over `contents`'s items (each filled slot),
--- calling `func` with each iteration in parallel.
---
---     `func`: a function that takes three parameters:
---         -> `chest_id`: the current chest's id as context
---         -> `slot`    : the current slot's index
---         -> `item`    : the current item
-function inventory:for_each_slot_in(chest_id, contents, func)
-    for slot, item in pairs(contents.items) do
-        func(chest_id, slot, item)
-    end
+    self.contents:for_each_chest(f)
 end
 
 -- Wrapper that iterates over each input chest's slots.
 function inventory:for_each_input_slot(func)
     local f = function(chest_id, contents)
-        self:for_each_slot_in(chest_id, contents, func)
+        self.contents:for_each_slot_in(
+            chest_id, contents, func
+        )
     end
     self:for_each_input_chest(f)
 end
@@ -286,7 +202,9 @@ end
 -- Wrapper that iterates over each output chest's slots.
 function inventory:for_each_output_slot(func)
     local f = function(chest_id, contents)
-        self:for_each_slot_in(chest_id, contents, func)
+        self.contents:for_each_slot_in(
+            chest_id, contents, func
+        )
     end
     self:for_each_output_chest(f)
 end
@@ -360,32 +278,13 @@ function inventory:find(sought_items)
 end
 
 function inventory:scan()
-    self.contents = chest_parser.read_from_chests()
-    self:save_contents()
+    self.contents:scan()
 end
 
 function inventory:scan_inputs()
     for _, chest_name in ipairs(self.inputs) do
-        self:update_chest(chest_name)
+        self.contents:update(chest_name)
     end
-end
-
-function inventory:update_chest(chest_id)
-    local chest = peripheral.wrap(chest_id)
-    local chest_data = { size = chest.size(), items = chest.list() }
-    self.contents[chest_id] = chest_data
-end
-
-function inventory:update_chests(chest_list, start_, end_)
-    for i = start_, end_ do
-        local chest_name = chest_list[i]
-        print("Updating " .. chest_name)
-        self:update_chest(chest_name)
-    end
-end
-
-function inventory:save_contents()
-    chest_parser.write_to_file(self.contents, self.contents_path)
 end
 
 return inventory

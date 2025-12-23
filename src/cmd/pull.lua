@@ -5,15 +5,15 @@ function pull.get_viable_pull_chests(self)
     local input_slots  = {}
     local output_names = {}
     local output_slots = {}
-    for chest_name, contents in pairs(self.contents) do
+    for chest_name, contents in pairs(self.contents.data) do
         if self:is_input_chest(chest_name) then
-            if not self:is_full(chest_name) then
-                local empty_slots = self:get_free_slots(chest_name)
+            if not self.contents:is_full(chest_name) then
+                local empty_slots = self.contents:get_free_slots(chest_name)
                 table.insert(input_names, chest_name)
                 table.insert(input_slots, empty_slots)
             end
         else
-            if not self:is_empty(chest_name) then
+            if not self.contents:is_empty(chest_name) then
                 table.insert(output_names, chest_name)
                 local slots = {}
                 for slot, item in pairs(contents.items) do
