@@ -1,16 +1,15 @@
-local cont      = require("src.contents")
-local inp       = require("src.inputs")
-local cfg       = require("utils.config_reader")
-local configure = require("src.configure")
-local plan      = require("src.plan")
+local cont  = require("src.contents")
+local inp   = require("src.inputs")
+local cfg   = require("utils.config_reader")
+local plan  = require("src.plan")
 
-local push      = require("src.cmd.push")
-local pull      = require("src.cmd.pull")
-local size      = require("src.cmd.size")
-local usage     = require("src.cmd.usage")
-local get       = require("src.cmd.get")
-local count     = require("src.cmd.count")
-local find      = require("src.cmd.find")
+local push  = require("src.cmd.push")
+local pull  = require("src.cmd.pull")
+local size  = require("src.cmd.size")
+local usage = require("src.cmd.usage")
+local get   = require("src.cmd.get")
+local count = require("src.cmd.count")
+local find  = require("src.cmd.find")
 
 local inventory = {}
 inventory.__index = inventory

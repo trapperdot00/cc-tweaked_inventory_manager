@@ -1,9 +1,8 @@
-local debugger          = require("utils.debugger")
-local configure         = require("src.configure")
-local cfg               = require("utils.config_reader")
-local inventory         = require("src.inventory")
+local debugger  = require("utils.debugger")
+local configure = require("src.configure")
+local inventory = require("src.inventory")
 
-local work_delegator    = {}
+local work_delegator = {}
 
 local function print_help()
     print("usage: " .. arg[0] .. " [options]")
@@ -16,13 +15,13 @@ local function print_help()
 end
 
 function work_delegator.delegate
-(options, contents_path, inputs_path, stacks_path)
-    if not options:valid() then
+(opts, contents_path, inputs_path, stacks_path)
+    if not opts:valid() then
         print_help()
         return
     end
 
-    if options.conf then
+    if opts.conf then
         configure.run(inputs_path)
         return
     end
@@ -32,25 +31,25 @@ function work_delegator.delegate
     )
 
     -- Handle non-exclusive flags
-    if options.scan then
+    if opts.scan then
         inv:scan()
     end
 
     -- Handle exclusive flags
-    if options.push then
+    if opts.push then
         inv:push()
-    elseif options.pull then
+    elseif opts.pull then
         inv:pull()
-    elseif options.size then
+    elseif opts.size then
         inv:size()
-    elseif options.usage then
+    elseif opts.usage then
         inv:usage()
-    elseif #options.get > 0 then
-        inv:get(options.get)
-    elseif #options.count > 0 then
-        inv:count(options.count)
-    elseif #options.find > 0 then
-        inv:find(options.find)
+    elseif #opts.get > 0 then
+        inv:get(opts.get)
+    elseif #opts.count > 0 then
+        inv:count(opts.count)
+    elseif #opts.find > 0 then
+        inv:find(opts.find)
     end
 end
 
