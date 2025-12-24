@@ -5,9 +5,10 @@ local cfg = require("utils.config_reader")
 local configure = {}
 
 local function draw_menu(self)
+    local title  = "Chest Setup"
     local old_bg = term.getBackgroundColor()
     term.setBackgroundColor(self.menucolor)
-    print(str.pad("Chest Setup", ' ', self.width))
+    print(str.pad(title, ' ', self.width))
     term.setBackgroundColor(old_bg)
 end
 
@@ -66,7 +67,6 @@ local function get_inventory_names()
 end
 
 function configure.run(filename)
-    local pwd = shell.resolve(".")
     local inputs = {}
     if fs.exists(filename) then
         if cfg.is_valid_seque_file(filename) then
@@ -75,13 +75,17 @@ function configure.run(filename)
     end
     local width, height = term.getSize()
     local self = {
-        width = width,
-        height = height,
-        chests = get_inventory_names(),
-        inputs = inputs,
-        start  = 1,
-        finish = 1,
-        cursor = 1,
+        -- Screen dimensions
+        width     = width,
+        height    = height,
+        -- Chest data
+        chests    = get_inventory_names(),
+        inputs    = inputs,
+        -- Visible elements
+        start     = 1,
+        finish    = 1,
+        cursor    = 1,
+        -- Colors
         menucolor = colors.brown,
         bgcolor   = colors.gray,
         hlcolor   = colors.red
@@ -110,7 +114,6 @@ function configure.run(filename)
                 self.cursor = self.cursor + 1
             end
         elseif key == keys.enter then
-            print(self.cursor, self.chests[self.cursor])
             local chest = self.chests[self.cursor]
             if tbl.contains(self.inputs, chest) then
                 local pos = tbl.find(self.inputs, chest)
