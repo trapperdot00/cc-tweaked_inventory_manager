@@ -1,8 +1,13 @@
-local cont  = require("src.contents")
-local inp   = require("src.inputs")
-local cfg   = require("utils.config_reader")
-local plan  = require("src.plan")
+-- Class data members
+local con = require("src.contents")
+local inp = require("src.inputs")
+local sta = require("src.stacks")
 
+-- Utilities
+local cfg  = require("utils.config_reader")
+local plan = require("src.plan")
+
+-- Commands
 local push  = require("src.cmd.push")
 local pull  = require("src.cmd.pull")
 local size  = require("src.cmd.size")
@@ -23,38 +28,25 @@ inventory.__index = inventory
 --   `inputs`     : An instance of inputs
 --                  that keeps track of the IDs
 --                  of input peripherals.
---   `stacks_path`: Filename of the document that
---                  describes the known items'
---                  stack sizes.
---   `stacks`     : Associative table that maps
---                  an item name to a stack size.
+--   `stacks`     : An instance of stacks
+--                  that keeps track of each
+--                  item's maximum stack size.
 function inventory.new
 (contents_path, inputs_path, stacks_path)
     local self = setmetatable({
-        contents      = cont.new(contents_path),
+        contents      = con.new(contents_path),
         inputs        = inp.new(inputs_path),
-        stacks_path   = stacks_path,
-        stacks        = nil
+        stacks        = sta.new(stacks_path)
     }, inventory)
     self.inputs:load()
     return self
 end
 
--- TODO: clean up this
-function inventory:load_stack()
-    if self.stacks then return end
-    local file = io.open(self.stacks_path)
-    if not file
-        then self.stacks = {}
-        return
-    end
-    local text = file:read('a')
-    file:close()
-    self.stacks = textutils.unserialize(text) or {}
-end
-
 function inventory:load(noscan)
-    self:load_stack()
+    if self.inputs:is_empty() then
+        self:configure()
+    end
+    self.stacks:load()
     self.contents:load() 
     if not noscan then
         self:scan_inputs()
@@ -127,22 +119,22 @@ function inventory:for_each_output_slot(func)
     self:for_each_output_chest(f)
 end
 
--- TODO: clean up this
+-- Updates stack size database
+-- with the items inside
+-- the input inventory peripherals
+--
+-- TODO: optimize, too slow!
 function inventory:update_stacksize()
     self:load()
-    local file = io.open(self.stacks_path, 'w')
-    if not file then return end
-    local item_equality = function(a, b)
-        return a.name == b.name
-    end
-    local func = function(chest_id, slot, item)
-        local chest = peripheral.wrap(chest_id)
-        local item  = chest.getItemDetail(slot)
-        self.stacks[item.name] = item.maxCount
+    local func = function(id, slot, item)
+        local inv  = peripheral.wrap(id)
+        local item = inv.getItemDetail(slot)
+        self.stacks:update_or_add(
+            item.name, item.maxCount
+        )
     end
     self:for_each_input_slot(func)
-    file:write(textutils.serialize(self.stacks))
-    file:close()
+    self.stacks:save_to_file()
 end
 
 -- Push items from the input peripherals
@@ -205,6 +197,10 @@ function inventory:scan_inputs()
     for _, inv_id in ipairs(self.inputs.data) do
         self.contents:update(inv_id)
     end
+end
+
+function inventory:configure()
+    self.inputs:configure()
 end
 
 return inventory

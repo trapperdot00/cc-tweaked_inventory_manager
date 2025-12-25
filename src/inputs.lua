@@ -25,13 +25,12 @@ end
 -- Does nothing if already loaded.
 function inputs:load()
     if self:is_loaded() then return end
-    if fs.exists(self.filename) and
-    cfg.is_valid_seque_file(self.filename) then
+    if cfg.is_valid_seque_file(self.filename) then
         self.data = cfg.read_seque(
             self.filename, ""
         )
     else
-        self:configure()
+        self.data = {}
     end
 end
 
@@ -42,6 +41,14 @@ end
 
 function inputs:save_to_file()
     cfg.write_seque(self.data, self.filename)
+end
+
+function inputs:size()
+    return #self.data
+end
+
+function inputs:is_empty()
+    return self:size() == 0
 end
 
 -- Checks whether the given peripheral

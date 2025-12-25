@@ -21,14 +21,14 @@ function work_delegator.delegate
         return
     end
 
-    if opts.conf then
-        configure.run(inputs_path)
-        return
-    end
-
     local inv = inventory.new(
         contents_path, inputs_path, stacks_path
     )
+
+    if opts.conf then
+        inv:configure()
+        return
+    end
 
     -- Handle non-exclusive flags
     if opts.scan then

@@ -113,7 +113,8 @@ function configure.run(filename)
                 end
                 self.cursor = self.cursor + 1
             end
-        elseif key == keys.enter then
+        elseif key == keys.enter
+            or key == keys.space then
             local chest = self.chests[self.cursor]
             if tbl.contains(self.inputs, chest) then
                 local pos = tbl.find(self.inputs, chest)
@@ -126,7 +127,7 @@ function configure.run(filename)
             break
         end
     end
-    return inputs
+    return self.inputs
 end
 
 return configure

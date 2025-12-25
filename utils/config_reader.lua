@@ -185,6 +185,11 @@ end
 function config_reader.read_seque(filename, key_prefix)
     local conf
     local file = io.open(filename)
+    if not file then
+        error(
+            "failed to open file '"..filename.."'"
+        )
+    end
     local starter = config_reader.read_next_nonspace_char(file)
     if starter ~= "{" then
         error("expected { to start sequential file \""..filename.."\" (got '"..starter.."')")
@@ -201,7 +206,9 @@ end
 -- Check whether a given sequential file
 -- has a valid and parseable format
 function config_reader.is_valid_seque_file(filename)
-    local func   = function() config_reader.read_seque(filename) end
+    local func = function()
+        config_reader.read_seque(filename)
+    end
     if pcall(func) then
         return true
     else
