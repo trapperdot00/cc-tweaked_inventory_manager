@@ -25,9 +25,14 @@ function work_delegator.delegate
         contents_path, inputs_path, stacks_path
     )
 
-    if opts.conf then
+    if opts.conf or inv.inputs:is_empty() then
         inv:configure()
-        return
+        if inv.inputs:is_empty() then
+            printError(
+                "Invalid config: no inputs!"
+            )
+            return
+        end
     end
 
     -- Handle non-exclusive flags

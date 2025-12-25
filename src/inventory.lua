@@ -43,9 +43,6 @@ function inventory.new
 end
 
 function inventory:load(noscan)
-    if self.inputs:is_empty() then
-        self:configure()
-    end
     self.stacks:load()
     self.contents:load() 
     if not noscan then
