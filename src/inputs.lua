@@ -35,7 +35,10 @@ function inputs:load()
 end
 
 function inputs:configure()
-    self.data = configure.run(self.filename)
+    local config = configure.run(self.filename)
+    if #config == 0 then
+        error("Invalid config: no inputs!", 0)
+    end
     self:save_to_file()
 end
 

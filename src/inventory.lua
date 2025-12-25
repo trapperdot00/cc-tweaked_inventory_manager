@@ -22,6 +22,9 @@ inventory.__index = inventory
 -- Constructs and returns a new instance
 -- of inventory
 -- Fields:
+--   `connected`  : Array of currently visible,
+--                  connected inventory
+--                  peripherals on the network.
 --   `contents`   : An instance of contents
 --                  that keeps track of the
 --                  inventory contents.
@@ -34,10 +37,14 @@ inventory.__index = inventory
 function inventory.new
 (contents_path, inputs_path, stacks_path)
     local self = setmetatable({
-        contents      = con.new(contents_path),
-        inputs        = inp.new(inputs_path),
-        stacks        = sta.new(stacks_path)
+        connected = {peripheral.find("inventory")},
+        contents  = con.new(contents_path),
+        inputs    = inp.new(inputs_path),
+        stacks    = sta.new(stacks_path)
     }, inventory)
+    if #self.connected == 0 then
+        error("No chests found on the network!", 0)
+    end
     self.inputs:load()
     return self
 end

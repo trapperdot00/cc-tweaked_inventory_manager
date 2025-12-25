@@ -21,16 +21,28 @@ function work_delegator.delegate
         return
     end
 
-    local inv = inventory.new(
-        contents_path, inputs_path, stacks_path
-    )
-
-    if opts.conf or inv.inputs:is_empty() then
-        inv:configure()
-        if inv.inputs:is_empty() then
-            printError(
-                "Invalid config: no inputs!"
+    local status, result = pcall(
+        function()
+            return inventory.new(
+                contents_path,
+                inputs_path,
+                stacks_path
             )
+        end
+    )
+    if not status then
+        printError(result)
+        return
+    end
+    local inv = result
+    if opts.conf or inv.inputs:is_empty() then
+        local status, result = pcall(
+            function()
+                return inv:configure()
+            end
+        )
+        if not status then
+            printError(result)
             return
         end
     end
