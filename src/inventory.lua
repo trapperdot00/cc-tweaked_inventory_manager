@@ -149,7 +149,12 @@ end
 -- Updates stack size database
 -- with the items inside
 -- the input inventory peripherals.
-function inventory:update_stacksize()
+-- Parameters:
+--     `incl_outputs`: Boolean flag, if provided
+--                     and true, will scan output
+--                     slots as well as input
+--                     slots for stack sizes.
+function inventory:update_stacksize(incl_outputs)
     self:load()
     local func = function(id, slot, item)
         local inv  = peripheral.wrap(id)
@@ -159,6 +164,9 @@ function inventory:update_stacksize()
         )
     end
     self:for_each_input_slot(func)
+    if incl_outputs == true then
+        self:for_each_output_slot(func)
+    end
     self.stacks:save_to_file()
 end
 
@@ -216,6 +224,7 @@ end
 
 function inventory:scan()
     self.contents:scan()
+    self:update_stacksize(true)
 end
 
 function inventory:scan_inputs()

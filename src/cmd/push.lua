@@ -35,7 +35,10 @@ function push.get_nonfull_viable_output_slots(self)
             goto next_chest
         end
         for slot, item in pairs(contents.items) do
-            local maxCount = self.stacks[item.name]
+            local maxCount =
+                self.stacks:get_stack_size(
+                    item.name
+                )
             local dsts = {}
             for dst_id, dst_contents in pairs(self.contents.data) do
                 if self.inputs:is_input_chest(dst_id) then
@@ -103,7 +106,8 @@ function push.get_existing_slot_filling_plans(self, contents)
     while items_i <= #srcs_items do
         -- Get info for current item
         local item_name  = srcs_items[items_i]
-        local stack_size = self.stacks[item_name]
+        local stack_size =
+            self.stacks:get_stack_size(item_name)
         -- Chests and slots that contain this item
         -- { ID = { slot1, slot2, ..., slotN } }
         local src_chests = srcs[item_name]

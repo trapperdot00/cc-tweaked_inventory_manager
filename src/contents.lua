@@ -126,9 +126,7 @@ end
 --                  and items as values
 function contents:for_each_chest(func)
     for inv_id, inv in pairs(self.data) do
-        local task = function()
-            func(inv_id, inv)
-        end
+        func(inv_id, inv)
     end
 end
 

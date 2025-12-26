@@ -13,7 +13,7 @@ function stacks.new(filename)
 end
 
 function stacks:is_loaded()
-    return data ~= nil
+    return self.data ~= nil
 end
 
 function stacks:load()
