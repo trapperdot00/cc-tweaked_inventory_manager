@@ -10,23 +10,21 @@ function pull.get_plans(self)
           not dst_it:is_done() do
         local src_data = src_it:get()
         local dst_data = dst_it:get()
-        if src_data.item then
-            if not dst_data.item then
-                local plan = {
-                    src      = src_data.id,
-                    dst      = dst_data.id,
-                    src_slot = src_data.slot
-                }
-                table.insert(plans, plan)
-                src_it:next()
-                dst_it:next()
-            else
-                -- Output slot is occupied
-                dst_it:next()
-            end
-        else
+        if not src_data.item then
             -- Input slot is empty
             src_it:next()
+        elseif dst_data.item then
+            -- Output slot is occupied
+            dst_it:next()
+        else
+            local plan = {
+                src      = src_data.id,
+                dst      = dst_data.id,
+                src_slot = src_data.slot
+            }
+            table.insert(plans, plan)
+            src_it:next()
+            dst_it:next()
         end
     end
     return plans
