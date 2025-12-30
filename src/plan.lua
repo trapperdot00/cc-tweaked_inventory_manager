@@ -47,7 +47,7 @@ end
 -- the peripheral IDs listed inside the
 -- given plan-list.
 -- The IDs are listed only once.
-function plan.get_affected_chests(plans)
+function plan.affected_chests(plans)
     local affected = {}
     for _, p in ipairs(plans) do
         if not tbl.contains(affected, p.src) then

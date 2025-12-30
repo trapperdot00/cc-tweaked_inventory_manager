@@ -8,7 +8,9 @@ iterator.__index = iterator
 -- the inventory state database.
 -- The returned iterator is set to the first
 -- element in the range.
+--
 -- Traversal order: each slot of each inventory.
+--
 -- Fields:
 --     `data`    : Table of inventory contents.
 --     `inv_ids` : Array of inventory IDs
@@ -16,7 +18,7 @@ iterator.__index = iterator
 --     `inv_size`: Size of current inventory ID.
 --     `inv_i`   : Index of current inventory ID.
 --     `slot`    : Current slot.
-function iterator.new(contents)
+function iterator:new(contents)
     local self = setmetatable(
         {
             data     = contents,
@@ -24,9 +26,8 @@ function iterator.new(contents)
             inv_size = nil,
             inv_i    = nil,
             slot     = nil
-        }, iterator
+        }, self
     )
-    self:first()
     return self
 end
 

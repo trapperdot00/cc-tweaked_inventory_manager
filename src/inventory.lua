@@ -4,10 +4,11 @@ local inp = require("src.inputs")
 local sta = require("src.stacks")
 
 -- Utilities
-local iter = require("src.iterator")
-local plan = require("src.plan")
-local tbl  = require("utils.table_utils")
-local tskp = require("utils.task_pool")
+local iter    = require("src.iterator")
+local iter_wp = require("src.iterator_wrapper")
+local plan    = require("src.plan")
+local tbl     = require("utils.table_utils")
+local tskp    = require("utils.task_pool")
 
 -- Commands
 local push  = require("src.cmd.push")
@@ -88,7 +89,7 @@ function inventory:carry_out(plans)
     plan.execute_plans(plans, self.task_pool)
     
     -- Update affected chests in memory
-    local affected = plan.get_affected_chests(plans)
+    local affected = plan.affected_chests(plans)
     for _, id in ipairs(affected) do
         print("updating", id)
         self.contents:update(id)
@@ -96,39 +97,51 @@ function inventory:carry_out(plans)
 
     -- Update chest database file
     if #affected > 0 then
-        print("saving to file", self.contents.filename)
+        print(
+            "saving to file", 
+            self.contents.filename
+        )
         self.contents:save_to_file()
     end
 end
 
 -- Acquire an iterator that traverses input
 -- inventory slots.
-function inventory:get_input_iterator()
+function inventory:get_input_iterator(predicate)
     local contents = {}
     local func = function(inv_id, inv)
         contents[inv_id] = inv
     end
     self:for_each_input_chest(func)
-    return iter.new(contents)
+    if predicate then
+        return iter_wp:new(contents, predicate)
+    else
+        return iter:new(contents)
+    end
 end
 
 -- Acquire an iterator that traverses output
 -- inventory slots.
-function inventory:get_output_iterator()
+function inventory:get_output_iterator(predicate)
     local contents = {}
     local func = function(inv_id, inv)
         contents[inv_id] = inv
     end
     self:for_each_output_chest(func)
-    return iter.new(contents)
+    if predicate then
+        return iter_wp:new(contents, predicate)
+    else
+        return iter:new(contents)
+    end
 end
 
 -- Wrapper for `for_each_chest` that only calls
--- `func` for a given chest if it is an input chest.
+-- `func` for a given chest
+-- if it is an input chest.
 function inventory:for_each_input_chest(func)
-    local f = function(chest_id, contents)
-        if self.inputs:is_input_chest(chest_id) then
-            func(chest_id, contents)
+    local f = function(inv_id, contents)
+        if self.inputs:is_input_chest(inv_id) then
+            func(inv_id, contents)
         end
     end
     self.contents:for_each_chest(f)
@@ -138,9 +151,10 @@ end
 -- only calls `func` for a given chest
 -- if it is an output chest.
 function inventory:for_each_output_chest(func)
-    local f = function(chest_id, contents)
-        if not self.inputs:is_input_chest(chest_id) then
-            func(chest_id, contents)
+    local f = function(inv_id, contents)
+        if not self.inputs:is_input_chest(inv_id)
+        then
+            func(inv_id, contents)
         end
     end
     self.contents:for_each_chest(f)
@@ -204,7 +218,15 @@ end
 -- into the input peripherals.
 function inventory:pull()
     local plans = pull.get_plans(self)
-    self:carry_out(plans)
+    for _, plan in ipairs(plans) do
+        print(
+            plan.src .. "[" ..
+            tostring(plan.src_slot) ..
+            "] -> " ..
+            plan.dst
+        )
+    end
+    --self:carry_out(plans)
 end
 
 function inventory:size()
