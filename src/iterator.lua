@@ -6,8 +6,6 @@ iterator.__index = iterator
 -- Constructs a new instance of iterator:
 -- an iterator that traverses the contents of
 -- the inventory state database.
--- The returned iterator is set to the first
--- element in the range.
 --
 -- Traversal order: each slot of each inventory.
 --
