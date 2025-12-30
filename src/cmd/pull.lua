@@ -1,69 +1,34 @@
+local iter = require("src.iterator")
 local pull = {}
-
-function pull.get_viable_pull_chests(self)
-    local input_names  = {}
-    local input_slots  = {}
-    local output_names = {}
-    local output_slots = {}
-    for chest_name, contents in pairs(self.contents.data) do
-        if self.inputs:is_input_chest(chest_name) then
-            if not self.contents:is_full(chest_name) then
-                local empty_slots = self.contents:get_free_slots(chest_name)
-                table.insert(input_names, chest_name)
-                table.insert(input_slots, empty_slots)
-            end
-        else
-            if not self.contents:is_empty(chest_name) then
-                table.insert(output_names, chest_name)
-                local slots = {}
-                for slot, item in pairs(contents.items) do
-                    table.insert(slots, slot)
-                end
-                table.insert(output_slots, slots)
-            end
-        end
-    end
-    local input = {
-        names = input_names,
-        slots = input_slots
-    }
-    local output = {
-        names = output_names,
-        slots = output_slots
-    }
-    return { input, output }
-end
 
 function pull.get_plans(self)
     self:load()
     local plans = {}
-
-    local dsts, srcs = table.unpack(
-        pull.get_viable_pull_chests(self)
-    )
-
-    local dst_i = 1
-    local src_i = 1
-    while dst_i <= #dsts.names and src_i <= #srcs.names do
-        local src       = srcs.names[src_i]
-        local src_slots = srcs.slots[src_i]
-        for _, src_slot in ipairs(src_slots) do
-            local dst = dsts.names[dst_i]
-            local plan = {
-                src      = src,
-                dst      = dst,
-                src_slot = src_slot
-            }
-            table.insert(plans, plan)
-            dsts.slots[dst_i] = dsts.slots[dst_i] - 1
-            if dsts.slots[dst_i] == 0 then
-                dst_i = dst_i + 1
+    local src_it = self:get_output_iterator()
+    local dst_it = self:get_input_iterator()
+    while not src_it:is_done() and
+          not dst_it:is_done() do
+        local src_data = src_it:get()
+        local dst_data = dst_it:get()
+        if src_data.item then
+            if not dst_data.item then
+                local plan = {
+                    src      = src_data.id,
+                    dst      = dst_data.id,
+                    src_slot = src_data.slot
+                }
+                table.insert(plans, plan)
+                src_it:next()
+                dst_it:next()
+            else
+                -- Output slot is occupied
+                dst_it:next()
             end
-            if dst_i > #dsts.names then break end
+        else
+            -- Input slot is empty
+            src_it:next()
         end
-        src_i = src_i + 1
     end
-
     return plans
 end
 
