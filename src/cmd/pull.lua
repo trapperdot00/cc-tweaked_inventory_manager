@@ -1,4 +1,3 @@
-local iter = require("src.iterator")
 local pull = {}
 
 function pull.get_plans(self)

@@ -1,5 +1,3 @@
-local debugger  = require("utils.debugger")
-local configure = require("src.configure")
 local inventory = require("src.inventory")
 
 local work_delegator = {}

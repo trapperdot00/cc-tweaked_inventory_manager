@@ -1,5 +1,3 @@
-local tbl = require("utils.table_utils")
-
 local stacks = {}
 stacks.__index = stacks
 
