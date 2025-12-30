@@ -4,10 +4,10 @@ local inp = require("src.inputs")
 local sta = require("src.stacks")
 
 -- Utilities
-local cfg  = require("utils.config_reader")
+local iter = require("src.iterator")
+local plan = require("src.plan")
 local tbl  = require("utils.table_utils")
 local tskp = require("utils.task_pool")
-local plan = require("src.plan")
 
 -- Commands
 local push  = require("src.cmd.push")
@@ -99,6 +99,24 @@ function inventory:carry_out(plans)
         print("saving to file", self.contents.filename)
         self.contents:save_to_file()
     end
+end
+
+function inventory:get_input_iterator()
+    local contents = {}
+    local func = function(inv_id, inv)
+        contents[inv_id] = inv
+    end
+    self:for_each_input_chest(func)
+    return iter.new(contents)
+end
+
+function inventory:get_output_iterator()
+    local contents = {}
+    local func = function(inv_id, inv)
+        contents[inv_id] = inv
+    end
+    self:for_each_output_chest(func)
+    return iter.new(contents)
 end
 
 -- Wrapper for `for_each_chest` that only calls
