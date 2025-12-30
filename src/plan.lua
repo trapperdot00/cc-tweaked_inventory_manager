@@ -20,6 +20,15 @@ function plan.execute_plan(p)
     local count    = p.count
     local dst_slot = p.dst_slot
 
+    print(
+        src .. "[" ..
+        tostring(src_slot) ..
+        "] -> " ..
+        dst .. "[" ..
+        tostring(dst_slot) .. "]{" ..
+        tostring(count) .. "}"
+    )
+
     local src_chest = peripheral.wrap(src)
     if count == nil then
         src_chest.pushItems(dst, src_slot)
