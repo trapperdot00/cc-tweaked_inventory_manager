@@ -14,16 +14,4 @@ function chest_parser.read_from_chests()
     return contents
 end
 
-function chest_parser.read_from_file(file)
-    local contents = file:read("a")
-    return textutils.unserialize(contents)
-end
-
-function chest_parser.write_to_file(contents, filename)
-    local file = io.open(filename, "w")
-    local serialized = textutils.serialize(contents)
-    file:write(serialized)
-    file:close()
-end
-
 return chest_parser

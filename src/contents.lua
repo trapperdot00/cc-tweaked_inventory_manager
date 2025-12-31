@@ -18,13 +18,14 @@ function contents.new(filename, task_pool)
         {
             filename  = filename,
             data      = nil,
-            task_pool = task_pool
+            task_pool = task_pool,
+            loaded    = false
         }, contents
     )
 end
 
 function contents:is_loaded()
-    return data ~= nil
+    return self.loaded
 end
 
 -- Tries to load contents from file,
@@ -36,11 +37,15 @@ function contents:load()
     if self:is_loaded() then return end
     local file = io.open(self.filename)
     if file then
-        self.data = chpr.read_from_file(file)
+        local file_data = file:read('a')
+        self.data = textutils.unserialize(
+            file_data
+        )
         file:close()
     else
         self:scan()
     end
+    self.loaded = true
 end
 
 -- Reads chest contents directly
@@ -64,7 +69,14 @@ function contents:update(inv_id)
 end
 
 function contents:save_to_file()
-    chpr.write_to_file(self.data, self.filename)
+    local file = io.open(self.filename, 'w')
+    if not file then
+        error("could not open file '" ..
+            self.filename .. "' for writing", 0)
+    end
+    local data = textutils.serialize(self.data)
+    file:write(data)
+    file:close()
 end
 
 -- Returns the capacity of the given
