@@ -16,8 +16,6 @@ local planner = require("src.move_planner")
 local size  = require("src.cmd.size")
 local usage = require("src.cmd.usage")
 local get   = require("src.cmd.get")
-local count = require("src.cmd.count")
-local find  = require("src.cmd.find")
 
 local inventory = {}
 inventory.__index = inventory
@@ -210,6 +208,9 @@ function inventory:update_stacksize(incl_outputs)
     self:load()
     local func = function(inv_id, inv_size,
                           slot, item)
+        if not tbl.contains(
+            self.connected, inv_id
+        ) then return end
         local inv  = peripheral.wrap(inv_id)
         local item = inv.getItemDetail(slot)
         if item then
@@ -222,7 +223,6 @@ function inventory:update_stacksize(incl_outputs)
     if incl_outputs == true then
         self:for_each_output_slot(func)
     end
-    self.stacks:save_to_file()
 end
 
 local function get_dst_names(self)
@@ -262,6 +262,11 @@ function inventory:pull()
     self:carry_out(plans)
 end
 
+function inventory:get(sought_items)
+    local plans = get.get_plans(self, sought_items)
+    self:carry_out(plans)
+end
+
 function inventory:size()
     local in_slots, out_slots = size.size(self)
     local full_slots = in_slots + out_slots
@@ -278,30 +283,53 @@ function inventory:usage()
     print("["..tostring(percent).."%]")
 end
 
-function inventory:get(sought_items)
-    local plans = get.get_plans(self, sought_items)
-    self:carry_out(plans)
-end
-
 function inventory:count(sought_items)
+    self:load(true)
     for _, item in ipairs(sought_items) do
-        local cnt = count.count(self, item)
+        local cnt = 0
+        local pred = function(curr)
+            return curr.item ~= nil
+                and curr.item.name == item
+        end
+        local it = self:get_output_iterator(pred)
+        it:first()
+        while not it:is_done() do
+            cnt = cnt + it:get().item.count
+            it:next()
+        end
         print(item, cnt)
     end
 end
 
 function inventory:find(sought_items)
+    self:load(true)
     for _, item in ipairs(sought_items) do
-        local chests = find.find(self, item)
-        for _, chest_id in ipairs(chests) do
-            print(item, "->", chest_id)
+        local inv_ids = {}
+        local pred = function(curr)
+            return curr.item ~= nil
+                and curr.item.name == item
+        end
+        local it = self:get_output_iterator(pred)
+        it:first()
+        while not it:is_done() do
+            local inv_id = it:get().id
+            if not tbl.contains(inv_ids, inv_id)
+            then
+                table.insert(inv_ids, inv_id)
+            end
+            it:next()
+        end
+        for _, inv_id in ipairs(inv_ids) do
+            print(item, "->", inv_id)
         end
     end
 end
 
 function inventory:scan()
     self.contents:scan()
+    self.contents:save_to_file()
     self:update_stacksize(true)
+    self.stacks:save_to_file()
 end
 
 function inventory:scan_inputs()
