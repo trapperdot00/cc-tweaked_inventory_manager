@@ -6,12 +6,14 @@ local move_planner = {}
 -- where there are items whose counts
 -- are less than their stack sizes.
 function move_planner.top_up
-(db, stacks, src_ids, dst_ids)
+(db, stacks, src_ids, dst_ids, item_name)
     local plans = {}
     local src_pred = function(curr)
         local item = curr.item
         return item ~= nil 
             and tbl.contains(src_ids, curr.id)
+            and (item_name == nil or
+                item.name == item_name)
     end
     local src_it = fiter:new(db, src_pred)
     src_it:first()
@@ -79,13 +81,15 @@ end
 -- Create plans for moving items from
 -- the input into the output inventories.
 function move_planner.move
-(db, stacks, src_ids, dst_ids)
+(db, stacks, src_ids, dst_ids, item_name)
     local plans = move_planner.top_up(
-        db, stacks, src_ids, dst_ids
+        db, stacks, src_ids, dst_ids, item_name
     )
     local src_pred = function(curr)
         return curr.item ~= nil
             and tbl.contains(src_ids, curr.id)
+            and (item_name == nil or
+                curr.item.name == item_name)
     end
     local dst_pred = function(curr)
         return curr.item == nil
@@ -115,7 +119,8 @@ function move_planner.move
         )
         db:del_item(src_val.id, src_val.slot)
         local topper = move_planner.top_up(
-            db, stacks, src_ids, dst_ids
+            db, stacks,
+            src_ids, dst_ids, item_name
         )
         table.move(
             topper, 1, #topper, #plans + 1, plans

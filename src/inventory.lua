@@ -15,7 +15,6 @@ local planner = require("src.move_planner")
 -- Commands
 local size  = require("src.cmd.size")
 local usage = require("src.cmd.usage")
-local get   = require("src.cmd.get")
 
 local inventory = {}
 inventory.__index = inventory
@@ -135,28 +134,6 @@ function inventory:get_output_db()
     return db
 end
 
--- Acquire an iterator that traverses input
--- inventory slots.
-function inventory:get_input_iterator(predicate)
-    local contents = self:get_input_db()
-    if predicate then
-        return fiter:new(contents, predicate)
-    else
-        return iter:new(contents)
-    end
-end
-
--- Acquire an iterator that traverses output
--- inventory slots.
-function inventory:get_output_iterator(predicate)
-    local contents = self:get_output_db()
-    if predicate then
-        return fiter:new(contents, predicate)
-    else
-        return iter:new(contents)
-    end
-end
-
 -- Wrapper for `for_each_chest` that only calls
 -- `func` for a given chest
 -- if it is an input chest.
@@ -244,6 +221,18 @@ local function get_dst_names(self)
     return dsts
 end
 
+local function print_plans(plans)
+    for _, plan in ipairs(plans) do
+        print(
+            plan.src .. "[" ..
+            tostring(plan.src_slot) .. "]->" ..
+            plan.dst .. "[" ..
+            tostring(plan.dst_slot) .. "]{" ..
+            tostring(plan.count) .. "}"
+        )
+    end
+end
+
 -- Push items from the input peripherals
 -- into the output peripherals.
 function inventory:push()
@@ -254,6 +243,7 @@ function inventory:push()
         self.inputs.data,
         get_dst_names(self)
     )
+    print_plans(plans)
     self:carry_out(plans)
 end
 
@@ -267,11 +257,29 @@ function inventory:pull()
         get_dst_names(self),
         self.inputs.data
     )
+    print_plans(plans)
     self:carry_out(plans)
 end
 
 function inventory:get(sought_items)
-    local plans = get.get_plans(self, sought_items)
+    self:load()
+    local db_cpy = tbl.deepcopy(self.contents.db)
+    local plans = {}
+    for _, item_name in ipairs(sought_items) do
+        local part_plans = planner.move(
+            db_cpy,
+            self.stacks,
+            get_dst_names(self),
+            self.inputs.data,
+            item_name
+        )
+        print(item_name, #part_plans)
+        table.move(
+            part_plans, 1, #part_plans,
+            #plans + 1, plans
+        )
+    end
+    print_plans(plans)
     self:carry_out(plans)
 end
 
@@ -299,7 +307,9 @@ function inventory:count(sought_items)
             return curr.item ~= nil
                 and curr.item.name == item
         end
-        local it = self:get_output_iterator(pred)
+        local it = fiter:new(
+            self:get_output_db(), pred
+        )
         it:first()
         while not it:is_done() do
             cnt = cnt + it:get().item.count
@@ -317,7 +327,9 @@ function inventory:find(sought_items)
             return curr.item ~= nil
                 and curr.item.name == item
         end
-        local it = self:get_output_iterator(pred)
+        local it = fiter:new(
+            self:get_output_db(), pred
+        )
         it:first()
         while not it:is_done() do
             local inv_id = it:get().id
