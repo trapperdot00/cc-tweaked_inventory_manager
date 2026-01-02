@@ -14,6 +14,7 @@ function find.find(self, sought_item)
         for _, item in pairs(inv_items) do
             if item.name == sought_item then
                 table.insert(found_ids, inv_id)
+                break
             end
         end
         ::next::
