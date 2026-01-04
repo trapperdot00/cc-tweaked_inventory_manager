@@ -268,7 +268,6 @@ function inventory:get(sought_items)
             self.inputs.data,
             item_name
         )
-        print(item_name, #part_plans)
         table.move(
             part_plans, 1, #part_plans,
             #plans + 1, plans

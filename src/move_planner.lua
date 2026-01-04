@@ -1,141 +1,134 @@
 local tbl   = require("utils.table_utils")
-local fiter = require("src.filter_iterator")
 local move_planner = {}
 
--- Create plans for topping up slots
--- where there are items whose counts
--- are less than their stack sizes.
-function move_planner.top_up
-(db, stacks, src_ids, dst_ids, item_name)
-    local plans = {}
-    -- Any slot from an input chest that
-    -- contains an item with the given name
-    local src_pred = function(curr)
-        local item = curr.item
-        return item ~= nil 
-            and tbl.contains(src_ids, curr.id)
-            and (item_name == nil or
-                item.name == item_name)
-    end
-    local src_it = fiter:new(db, src_pred)
-    src_it:first()
-    while not src_it:is_done() do
-        local src_val  = src_it:get()
-        local src_item = src_val.item
-        local stack    = stacks:get(src_item.name)
-        -- Any slot from an output chest that
-        -- contains an item with the given name
-        -- and its not full
-        local dst_pred = function(curr)
-            local item = curr.item
-            return item ~= nil
-                and item.name == src_item.name
-                and item.count < stack
-                and tbl.contains(dst_ids, curr.id)
+local function get_empty_slots
+(db, inv_ids)
+    -- INV_IDS = { SLOTS }
+    local empty_slots = {}
+    for _, inv_id in ipairs(inv_ids) do
+        if empty_slots[inv_id] == nil then
+            empty_slots[inv_id] = {}
         end
-        local dst_it = fiter:new(db, dst_pred)
-        dst_it:first()
-        while not dst_it:is_done() and
-            src_item.count > 0 do
-            local dst_val  = dst_it:get()
-            local dst_item = dst_val.item
-            local cap = stack - dst_item.count
-            local cnt = math.min(
-                cap, src_item.count
-            )
-            local src_cnt = src_item.count - cnt
-            local dst_cnt = dst_item.count + cnt
-            local plan = {
-                src      = src_val.id,
-                src_slot = src_val.slot,
-                dst      = dst_val.id,
-                dst_slot = dst_val.slot,
-                count    = cnt
-            }
-            table.insert(plans, plan)
-            if src_cnt == 0 then
-                db:del_item(
-                    src_val.id, src_val.slot
-                )
-                src_item.count = 0
-            else
-                db:add_item(
-                    src_val.id, src_val.slot,
-                    {
-                        name  = src_item.name,
-                        count = src_cnt
-                    }
-                )
-                src_item.count = src_cnt
+        local inv_size = db:get_size(inv_id)
+        for slot = 1, inv_size do
+            if db:item_exists(inv_id, slot) then
+                goto next
             end
-            db:add_item(dst_val.id, dst_val.slot,
-                {
-                    name  = dst_item.name,
-                    count = dst_cnt
-                }
+            table.insert(
+                empty_slots[inv_id], slot
             )
-            if dst_cnt == stack then
-                dst_it:next()
-            end
+            ::next::
         end
-        src_it:next()
     end
-    return plans
+    return empty_slots
 end
 
--- Create plans for moving items from
--- the input into the output inventories.
+local function get_nonfull_slots
+(db, stacks, inv_ids, item_name)
+    -- INV_IDS = { SLOTS }
+    local nonfull_slots = {}
+    for _, inv_id in ipairs(inv_ids) do
+        local inv_items = db:get_items(inv_id)
+        for slot, item in pairs(inv_items) do
+            local stack_size = stacks:get(item.name)
+            if item.name == item_name and
+               item.count < stack_size then
+                if nonfull_slots[inv_id] == nil then
+                    nonfull_slots[inv_id] = {}
+                end
+                table.insert(
+                    nonfull_slots[inv_id],
+                    slot
+                )
+            end
+        end
+    end
+    return nonfull_slots
+end
+
 function move_planner.move
 (db, stacks, src_ids, dst_ids, item_name)
-    local plans = move_planner.top_up(
-        db, stacks, src_ids, dst_ids, item_name
-    )
-    -- Any slot from an input chest that
-    -- contains an item with the given name
-    local src_pred = function(curr)
-        return curr.item ~= nil
-            and tbl.contains(src_ids, curr.id)
-            and (item_name == nil or
-                curr.item.name == item_name)
+    local plans = {}
+    local t1 = os.clock()
+    for _, src_id in ipairs(src_ids) do
+        local src_items = db:get_items(src_id)
+        for src_slot, src_item in pairs(src_items) do
+            if item_name ~= nil and
+               src_item.name ~= item_name then
+                goto next_src_slot
+            end
+            local stack_size = stacks:get(
+                src_item.name
+            )
+            local top_ups = get_nonfull_slots(
+                db, stacks,
+                dst_ids, src_item.name
+            )
+            local src_cnt = src_item.count
+            for dst_id, dst_slots in pairs(top_ups) do
+                for _, dst_slot in ipairs(dst_slots) do
+                    local dst_item = db:get_item(
+                        dst_id, dst_slot
+                    )
+                    local cap = stack_size - dst_item.count
+                    local cnt = math.min(
+                        src_cnt, cap
+                    )
+                    if cnt > 0 then
+                        local plan = {
+                            src      = src_id,
+                            src_slot = src_slot,
+                            dst      = dst_id,
+                            dst_slot = dst_slot,
+                            count    = cnt
+                        }
+                        table.insert(plans, plan)
+                        src_cnt = src_cnt - cnt
+                        db:add_item(dst_id, dst_slot,
+                            {
+                                name  = dst_item.name,
+                                count = dst_item.count + cnt
+                            }
+                        )
+                        if src_cnt == 0 then
+                            goto next_src_slot
+                        end
+                    end
+                end
+            end
+            local empties = get_empty_slots(
+                db, dst_ids, src_item.name
+            )
+            for dst_id, dst_slots in pairs(empties) do
+                for _, dst_slot in ipairs(dst_slots) do
+                    local cnt = math.min(
+                        src_cnt, stack_size
+                    )
+                    if cnt > 0 then
+                        local plan = {
+                            src      = src_id,
+                            src_slot = src_slot,
+                            dst      = dst_id,
+                            dst_slot = dst_slot,
+                            count    = cnt
+                        }
+                        table.insert(plans, plan)
+                        src_cnt = 0
+                        db:add_item(dst_id, dst_slot,
+                            {
+                                name  = src_item.name,
+                                count = cnt
+                            }
+                        )
+                        goto next_src_slot
+                    end
+                end
+            end
+            ::next_src_slot::
+        end
     end
-    -- Any empty slot from an output chest
-    local dst_pred = function(curr)
-        return curr.item == nil
-            and tbl.contains(dst_ids, curr.id)
-    end
-    local src_it = fiter:new(db, src_pred)
-    local dst_it = fiter:new(db, dst_pred)
-    src_it:first()
-    dst_it:first()
-    while not src_it:is_done() and
-          not dst_it:is_done() do
-        local src_val = src_it:get()
-        local dst_val = dst_it:get()
-        local plan = {
-            src      = src_val.id,
-            src_slot = src_val.slot,
-            dst      = dst_val.id,
-            dst_slot = dst_val.slot,
-            count    = src_val.item.count
-        }
-        table.insert(plans, plan)
-        db:add_item(dst_val.id, dst_val.slot,
-            {
-                name  = src_val.item.name,
-                count = src_val.item.count
-            }
-        )
-        db:del_item(src_val.id, src_val.slot)
-        local topper = move_planner.top_up(
-            db, stacks,
-            src_ids, dst_ids, item_name
-        )
-        table.move(
-            topper, 1, #topper, #plans + 1, plans
-        )
-        src_it:next()
-        dst_it:next()
-    end
+    local t2 = os.clock()
+    print("planning took", t2 - t1, "seconds")
     return plans
 end
 
