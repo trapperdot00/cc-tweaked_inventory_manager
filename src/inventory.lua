@@ -233,6 +233,7 @@ end
 -- into the output peripherals.
 function inventory:push()
     self:update_stacksize()
+    self.stacks:save_to_file()
     local plans = planner.move(
         tbl.deepcopy(self.contents.db),
         self.stacks,
