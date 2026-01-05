@@ -14,12 +14,17 @@ end
 
 function work_delegator.delegate
 (opts, contents_path, inputs_path, stacks_path)
-    if not opts:valid() then
+    local exflags   = opts.excl.flags
+    local exvaropts = opts.excl.varopts
+    local noexflags = opts.noexcl.flags
+
+    if exflags.help or not opts.valid
+    then
         print_help()
         return
     end
 
-    local status, result = pcall(
+    local status, inv = pcall(
         function()
             return inventory.new(
                 contents_path,
@@ -29,11 +34,12 @@ function work_delegator.delegate
         end
     )
     if not status then
-        printError(result)
+        printError(inv)
         return
     end
-    local inv = result
-    if opts.conf or inv.inputs:is_empty() then
+    if exflags.configure
+        or inv.inputs:is_empty()
+    then
         local status, result = pcall(
             function()
                 return inv:configure()
@@ -46,25 +52,25 @@ function work_delegator.delegate
     end
 
     -- Handle non-exclusive flags
-    if opts.scan then
+    if noexflags.scan then
         inv:scan()
     end
 
     -- Handle exclusive flags
-    if opts.push then
+    if exflags.push then
         inv:push()
-    elseif opts.pull then
+    elseif exflags.pull then
         inv:pull()
-    elseif opts.size then
+    elseif exflags.size then
         inv:size()
-    elseif opts.usage then
+    elseif exflags.usage then
         inv:usage()
-    elseif #opts.get > 0 then
-        inv:get(opts.get)
-    elseif #opts.count > 0 then
-        inv:count(opts.count)
-    elseif #opts.find > 0 then
-        inv:find(opts.find)
+    elseif #exvaropts.get > 0 then
+        inv:get(exvaropts.get)
+    elseif #exvaropts.count > 0 then
+        inv:count(exvaropts.count)
+    elseif #exvaropts.find > 0 then
+        inv:find(exvaropts.find)
     end
 end
 

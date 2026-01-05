@@ -40,13 +40,14 @@ local function main()
     )
 
     -- Parsed command-line arguments
-    local options = cliargs.parse()
+    local options = cliargs.new()
+    options:parse()
     
     -- Select appropriate work for
     -- given command-line arguments
     work.delegate(
-        options, contents_path,
-        inputs_path, stacks_path
+        options,
+        contents_path, inputs_path, stacks_path
     )
 end
 
