@@ -38,7 +38,7 @@ function work_delegator.delegate
         return
     end
     if exflags.configure
-        or inv.inputs:is_empty()
+        or inv.inputs:size() == 0
     then
         local status, result = pcall(
             function()

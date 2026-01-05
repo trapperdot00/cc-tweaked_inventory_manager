@@ -64,7 +64,8 @@ function inventory.new
 end
 
 function inventory:load(noscan)
-    for _, input in ipairs(self.inputs.data) do
+    for i = 1, self.inputs:size() do
+        local input = self.inputs:get(i)
         if not tbl.contains(
             self.connected, input
         ) then
@@ -114,8 +115,7 @@ local function get_db(db, inputs, is_input)
     local in_db = inv_db.new()
     local inv_ids = db:get_inv_ids()
     for _, inv_id in ipairs(inv_ids) do
-        if is_input == inputs:is_input_chest(inv_id)
-        then
+        if is_input == inputs:exists(inv_id) then
             local inv_size = db:get_size(inv_id)
             local items = db:get_items(inv_id)
             in_db:add_inv(inv_id, inv_size)
@@ -210,7 +210,7 @@ function inventory:push()
     local plans = planner.move(
         tbl.deepcopy(self.contents.db),
         self.stacks,
-        self.inputs.data,
+        self.inputs.db.data,
         get_dst_names(self)
     )
     self:carry_out(plans)
@@ -224,7 +224,7 @@ function inventory:pull()
         tbl.deepcopy(self.contents.db),
         self.stacks,
         get_dst_names(self),
-        self.inputs.data
+        self.inputs.db.data
     )
     self:carry_out(plans)
 end
@@ -238,7 +238,7 @@ function inventory:get(sought_items)
             db_cpy,
             self.stacks,
             get_dst_names(self),
-            self.inputs.data,
+            self.inputs.db.data,
             item_name
         )
         table.move(
@@ -314,13 +314,12 @@ end
 function inventory:size()
     self:load(true)
     local db = self.contents.db
-    local inputs = self.inputs
     local src_slots = 0
     local dst_slots = 0
     local inv_ids = db:get_inv_ids()
     for _, inv_id in ipairs(inv_ids) do
         local inv_size = db:get_size(inv_id)
-        if inputs:is_input_chest(inv_id) then
+        if self.inputs:exists(inv_id) then
             src_slots = src_slots + inv_size
         else
             dst_slots = dst_slots + inv_size
@@ -335,12 +334,11 @@ end
 function inventory:usage()
     self:load(true)
     local db = self.contents.db
-    local inputs = self.inputs
     local all = 0
     local occupied = 0
     local inv_ids = db:get_inv_ids()
     for _, inv_id in ipairs(inv_ids) do
-        if not inputs:is_input_chest(inv_id) then
+        if not self.inputs:exists(inv_id) then
             local inv_size = db:get_size(inv_id)
             local full = db:occupied_slots(inv_id)
             all = all + inv_size
@@ -365,7 +363,8 @@ function inventory:scan()
 end
 
 function inventory:scan_inputs()
-    for _, inv_id in ipairs(self.inputs.data) do
+    for i = 1, self.inputs:size() do
+        local inv_id = self.inputs:get(i)
         self.contents:update(inv_id)
     end
 end
