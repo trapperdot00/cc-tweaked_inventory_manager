@@ -58,6 +58,20 @@ end
 local function get_inventory_names(extras)
     local invs = { peripheral.find("inventory") }
     local inv_names = {}
+    local id_comp = function(id_a, id_b)
+        local a_split = str.split(id_a, '_')
+        local a_str = table.concat(
+            a_split, '', 1, #a_split - 1
+        )
+        local a_num = tonumber(a_split[#a_split])
+        local b_split = str.split(id_b, '_')
+        local b_str = table.concat(
+            b_split, '', 1, #b_split - 1
+        )
+        local b_num = tonumber(b_split[#b_split])
+        return a_str < b_str or
+            (a_str == b_str and a_num <= b_num)
+    end
     for i = 1, #invs do
         local inv_name = peripheral.getName(invs[i])
         table.insert(inv_names, inv_name)
@@ -68,6 +82,7 @@ local function get_inventory_names(extras)
             table.insert(inv_names, inv_name)
         end
     end
+    table.sort(inv_names, id_comp)
     return inv_names
 end
 
