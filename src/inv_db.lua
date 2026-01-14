@@ -75,25 +75,24 @@ end
 
 function inv_db:occupied_slots(inv_id)
     throw_if_inv_doesnt_exist(self, inv_id)
-    local inv_items = self:get_items(inv_id)
-    return tbl.size(inv_items)
+    return tbl.size(self:get_items(inv_id))
 end
 
 function inv_db:free_slots(inv_id)
     throw_if_inv_doesnt_exist(self, inv_id)
-    local inv_size = self:get_size(inv_id)
-    return inv_size - self:occupied_slots(inv_id)
+    return self:get_size(inv_id) -
+           self:occupied_slots(inv_id)
 end
 
 local function
 throw_if_slot_out_of_range(self, inv_id, slot)
-    local inv_size = self:get_size(inv_id)
-    if slot < 1 or slot > inv_size then
+    if slot < 1 or slot > self:get_size(inv_id)
+    then
         error(
             "slot out of range for " ..
             "inventory '" .. inv_id ..
             "' (size: " ..
-            tostring(inv_size) ..
+            tostring(self:get_size(inv_id)) ..
             ", got: " ..
             tostring(slot) .. ")"
             , 0
