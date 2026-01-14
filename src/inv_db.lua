@@ -26,12 +26,11 @@ inv_db.__index = inv_db
 --==== IMPLEMENTATION ====--
 
 function inv_db.new()
-    local self = setmetatable(
+    return setmetatable(
         {
             data = {}
         }, inv_db
     )
-    return self
 end
 
 function inv_db:inv_exists(inv_id)
