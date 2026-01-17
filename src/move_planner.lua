@@ -52,13 +52,10 @@ function move_planner.move
     local t1 = os.clock()
     for _, src_id in ipairs(src_ids) do
         for src_slot, src_item in pairs(db:get_items(src_id)) do
-            if item_name ~= nil and
-               src_item.name ~= item_name then
+            if item_name ~= nil and src_item.name ~= item_name then
                 goto next_src_slot
             end
-            local stack_size = stacks:get(
-                src_item.name
-            )
+            local stack_size = stacks:get(src_item.name)
             local top_ups = get_nonfull_slots(
                 db, stacks,
                 dst_ids, src_item.name
@@ -66,13 +63,9 @@ function move_planner.move
             local src_cnt = src_item.count
             for dst_id, dst_slots in pairs(top_ups) do
                 for _, dst_slot in ipairs(dst_slots) do
-                    local dst_item = db:get_item(
-                        dst_id, dst_slot
-                    )
+                    local dst_item = db:get_item(dst_id, dst_slot)
                     local cap = stack_size - dst_item.count
-                    local cnt = math.min(
-                        src_cnt, cap
-                    )
+                    local cnt = math.min(src_cnt, cap)
                     if cnt > 0 then
                         local plan = {
                             src      = src_id,
@@ -83,26 +76,18 @@ function move_planner.move
                         }
                         table.insert(plans, plan)
                         src_cnt = src_cnt - cnt
-                        db:add_item(dst_id, dst_slot,
-                            {
-                                name  = dst_item.name,
-                                count = dst_item.count + cnt
-                            }
-                        )
-                        if src_cnt == 0 then
-                            goto next_src_slot
-                        end
+                        db:add_item(dst_id, dst_slot, {
+                            name  = dst_item.name,
+                            count = dst_item.count + cnt
+                        })
+                        if src_cnt == 0 then goto next_src_slot end
                     end
                 end
             end
-            local empties = get_empty_slots(
-                db, dst_ids, src_item.name
-            )
+            local empties = get_empty_slots(db, dst_ids, src_item.name)
             for dst_id, dst_slots in pairs(empties) do
                 for _, dst_slot in ipairs(dst_slots) do
-                    local cnt = math.min(
-                        src_cnt, stack_size
-                    )
+                    local cnt = math.min(src_cnt, stack_size)
                     if cnt > 0 then
                         local plan = {
                             src      = src_id,
@@ -113,12 +98,10 @@ function move_planner.move
                         }
                         table.insert(plans, plan)
                         src_cnt = 0
-                        db:add_item(dst_id, dst_slot,
-                            {
-                                name  = src_item.name,
-                                count = cnt
-                            }
-                        )
+                        db:add_item(dst_id, dst_slot, {
+                            name  = src_item.name,
+                            count = cnt
+                        })
                         goto next_src_slot
                     end
                 end
