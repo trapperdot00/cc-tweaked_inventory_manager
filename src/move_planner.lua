@@ -1,4 +1,4 @@
-local tbl   = require("utils.table_utils")
+local tbl = require("utils.table_utils")
 local move_planner = {}
 
 local function get_empty_slots
@@ -123,7 +123,6 @@ end
 function move_planner.move
 (db, stacks, src_ids, dst_ids, item_name)
     local plans = {}
-    local t1 = os.clock()
     for _, src_id in ipairs(src_ids) do
         for src_slot, src_item in pairs(db:get_items(src_id)) do
             if item_name == nil or src_item.name == item_name then
@@ -140,8 +139,6 @@ function move_planner.move
             end
         end
     end
-    local t2 = os.clock()
-    print("planning took", t2 - t1, "seconds")
     return plans
 end
 
