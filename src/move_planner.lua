@@ -55,12 +55,11 @@ function move_planner.move
             if item_name ~= nil and src_item.name ~= item_name then
                 goto next_src_slot
             end
-            local src_cnt = src_item.count
             for dst_id, dst_slots in pairs(get_nonfull_slots(db, stacks, dst_ids, src_item.name)) do
                 for _, dst_slot in ipairs(dst_slots) do
                     local dst_item = db:get_item(dst_id, dst_slot)
                     local cap = stacks:get(src_item.name) - dst_item.count
-                    local cnt = math.min(src_cnt, cap)
+                    local cnt = math.min(src_item.count, cap)
                     if cnt > 0 then
                         local plan = {
                             src      = src_id,
@@ -70,19 +69,19 @@ function move_planner.move
                             count    = cnt
                         }
                         table.insert(plans, plan)
-                        src_cnt = src_cnt - cnt
+                        src_item.count = src_item.count - cnt
                         db:add_item(dst_id, dst_slot, {
                             name  = dst_item.name,
                             count = dst_item.count + cnt
                         })
-                        if src_cnt == 0 then goto next_src_slot end
+                        if src_item.count == 0 then goto next_src_slot end
                     end
                 end
             end
             local empties = get_empty_slots(db, dst_ids, src_item.name)
             for dst_id, dst_slots in pairs(empties) do
                 for _, dst_slot in ipairs(dst_slots) do
-                    local cnt = math.min(src_cnt, stacks:get(src_item.name))
+                    local cnt = math.min(src_item.count, stacks:get(src_item.name))
                     if cnt > 0 then
                         local plan = {
                             src      = src_id,
@@ -92,7 +91,7 @@ function move_planner.move
                             count    = cnt
                         }
                         table.insert(plans, plan)
-                        src_cnt = 0
+                        src_item.count = 0
                         db:add_item(dst_id, dst_slot, {
                             name  = src_item.name,
                             count = cnt
