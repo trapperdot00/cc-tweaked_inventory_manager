@@ -113,7 +113,7 @@ local function apply_top_ups(plans, db, stacks, dst_ids, src_id, src_slot, src_i
                 name  = src_item.name,
                 count = cnt
             })
-            moved = moved + cnt
+            moved = moved + plan.count
         end
         table.move(top_ups, 1, #top_ups, #plans + 1, plans)
     end
@@ -149,14 +149,11 @@ function move_planner.move
                 if limit ~= nil then
                     limit = limit - topped
                 end
-                print("limit", limit)
-                print("topped", topped)
                 if src_item.count > 0 then
                     local moved = apply_move(
                         plans, db, stacks,
                         dst_ids, src_id, src_slot, src_item, limit
                     )
-                    print("moved", moved)
                     if limit ~= nil then
                         limit = limit - moved
                     end
