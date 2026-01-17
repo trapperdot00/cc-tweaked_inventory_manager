@@ -57,8 +57,7 @@ function move_planner.move
             end
             for dst_id, dst_slots in pairs(get_nonfull_slots(db, stacks, dst_ids, src_item.name)) do
                 for _, dst_slot in ipairs(dst_slots) do
-                    local dst_item = db:get_item(dst_id, dst_slot)
-                    local cap = stacks:get(src_item.name) - dst_item.count
+                    local cap = stacks:get(src_item.name) - db:get_item(dst_id, dst_slot).count
                     local cnt = math.min(src_item.count, cap)
                     if cnt > 0 then
                         local plan = {
@@ -71,8 +70,8 @@ function move_planner.move
                         table.insert(plans, plan)
                         src_item.count = src_item.count - cnt
                         db:add_item(dst_id, dst_slot, {
-                            name  = dst_item.name,
-                            count = dst_item.count + cnt
+                            name  = db:get_item(dst_id, dst_slot).name,
+                            count = db:get_item(dst_id, dst_slot).count + cnt
                         })
                         if src_item.count == 0 then goto next_src_slot end
                     end
