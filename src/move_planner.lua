@@ -55,12 +55,8 @@ function move_planner.move
             if item_name ~= nil and src_item.name ~= item_name then
                 goto next_src_slot
             end
-            local top_ups = get_nonfull_slots(
-                db, stacks,
-                dst_ids, src_item.name
-            )
             local src_cnt = src_item.count
-            for dst_id, dst_slots in pairs(top_ups) do
+            for dst_id, dst_slots in pairs(get_nonfull_slots(db, stacks, dst_ids, src_item.name)) do
                 for _, dst_slot in ipairs(dst_slots) do
                     local dst_item = db:get_item(dst_id, dst_slot)
                     local cap = stacks:get(src_item.name) - dst_item.count
