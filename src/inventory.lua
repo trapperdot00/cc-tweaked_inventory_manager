@@ -229,25 +229,18 @@ function inventory:pull()
     self:carry_out(plans)
 end
 
-function inventory:get(sought_items, limit)
+function inventory:get(item, limit)
     self:load()
     local db_cpy = tbl.deepcopy(self.contents.db)
-    local plans = {}
-    for _, item_name in ipairs(sought_items) do
-        local item_plans = planner.move(
-            db_cpy,
-            self.stacks,
-            get_dst_names(self),
-            self.inputs.db.data,
-            item_name,
-            limit
-        )
-        table.move(
-            item_plans, 1, #item_plans,
-            #plans + 1, plans
-        )
-    end
-    self:carry_out(plans)
+    local item_plans = planner.move(
+        db_cpy,
+        self.stacks,
+        get_dst_names(self),
+        self.inputs.db.data,
+        item,
+        limit
+    )
+    self:carry_out(item_plans)
 end
 
 function inventory:count(sought_items)

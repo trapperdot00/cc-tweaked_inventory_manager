@@ -1,3 +1,4 @@
+local str = require("utils.string_utils")
 local inventory = require("src.inventory")
 
 local work_delegator = {}
@@ -66,7 +67,15 @@ function work_delegator.delegate
     elseif exflags.usage then
         inv:usage()
     elseif #exvaropts.get > 0 then
-        inv:get(exvaropts.get)
+        for _, entry in ipairs(exvaropts.get) do
+            local data = str.split(entry, ':')
+            local item = table.concat(data, ':', 1, 2)
+            if #data == 3 then
+                inv:get(item, tonumber(data[3]))
+            else
+                inv:get(item)
+            end
+        end
     elseif #exvaropts.count > 0 then
         inv:count(exvaropts.count)
     elseif #exvaropts.find > 0 then
