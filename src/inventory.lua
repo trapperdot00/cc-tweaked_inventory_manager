@@ -229,7 +229,7 @@ function inventory:pull()
     self:carry_out(plans)
 end
 
-function inventory:get(sought_items)
+function inventory:get(sought_items, limit)
     self:load()
     local db_cpy = tbl.deepcopy(self.contents.db)
     local plans = {}
@@ -239,7 +239,8 @@ function inventory:get(sought_items)
             self.stacks,
             get_dst_names(self),
             self.inputs.db.data,
-            item_name
+            item_name,
+            limit
         )
         table.move(
             item_plans, 1, #item_plans,
