@@ -51,8 +51,7 @@ function move_planner.move
     local plans = {}
     local t1 = os.clock()
     for _, src_id in ipairs(src_ids) do
-        local src_items = db:get_items(src_id)
-        for src_slot, src_item in pairs(src_items) do
+        for src_slot, src_item in pairs(db:get_items(src_id)) do
             if item_name ~= nil and
                src_item.name ~= item_name then
                 goto next_src_slot
