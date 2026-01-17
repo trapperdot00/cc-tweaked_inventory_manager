@@ -77,8 +77,7 @@ function move_planner.move
                     end
                 end
             end
-            local empties = get_empty_slots(db, dst_ids, src_item.name)
-            for dst_id, dst_slots in pairs(empties) do
+            for dst_id, dst_slots in pairs(get_empty_slots(db, dst_ids, src_item.name)) do
                 for _, dst_slot in ipairs(dst_slots) do
                     local cnt = math.min(src_item.count, stacks:get(src_item.name))
                     if cnt > 0 then
