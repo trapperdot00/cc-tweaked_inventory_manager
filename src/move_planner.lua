@@ -92,6 +92,34 @@ local function get_insert_plan(db, stacks, dst_ids, src_id, src_slot, src_item)
     end
 end
 
+local function apply_top_ups(plans, db, stacks, dst_ids, src_id, src_slot, src_item)
+    local top_ups = get_top_up_plans(
+        db, stacks, dst_ids, src_id, src_slot, src_item
+    )
+    if top_ups ~= nil then
+        for _, plan in ipairs(top_ups) do
+            db:add_item(plan.dst, plan.dst_slot, {
+                name  = src_item.name,
+                count = db:get_item(plan.dst, plan.dst_slot).count + plan.count
+            })
+        end
+        table.move(top_ups, 1, #top_ups, #plans + 1, plans)
+    end
+end
+
+local function apply_move(plans, db, stacks, dst_ids, src_id, src_slot, src_item)
+    local plan = get_insert_plan(
+        db, stacks, dst_ids, src_id, src_slot, src_item
+    )
+    if plan ~= nil then
+        db:add_item(plan.dst, plan.dst_slot, {
+            name  = src_item.name,
+            count = plan.count
+        })
+        table.insert(plans, plan)
+    end
+end
+
 function move_planner.move
 (db, stacks, src_ids, dst_ids, item_name)
     local plans = {}
@@ -99,29 +127,15 @@ function move_planner.move
     for _, src_id in ipairs(src_ids) do
         for src_slot, src_item in pairs(db:get_items(src_id)) do
             if item_name == nil or src_item.name == item_name then
-                local top_ups = get_top_up_plans(
-                    db, stacks, dst_ids, src_id, src_slot, src_item
+                apply_top_ups(
+                    plans, db, stacks,
+                    dst_ids, src_id, src_slot, src_item
                 )
-                if top_ups ~= nil then
-                    for _, plan in ipairs(top_ups) do
-                        db:add_item(plan.dst, plan.dst_slot, {
-                            name  = src_item.name,
-                            count = db:get_item(plan.dst, plan.dst_slot).count + plan.count
-                        })
-                    end
-                    table.move(top_ups, 1, #top_ups, #plans + 1, plans)
-                end
                 if src_item.count > 0 then
-                    local plan = get_insert_plan(
-                        db, stacks, dst_ids, src_id, src_slot, src_item
+                    apply_move(
+                        plans, db, stacks,
+                        dst_ids, src_id, src_slot, src_item
                     )
-                    if plan ~= nil then
-                        db:add_item(plan.dst, plan.dst_slot, {
-                            name  = src_item.name,
-                            count = plan.count
-                        })
-                        table.insert(plans, plan)
-                    end
                 end
             end
         end
