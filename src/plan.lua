@@ -14,24 +14,18 @@ local tbl  = require("utils.table_utils")
 local plan = {}
 
 function plan.execute_plan(p)
-    local src      = p.src
-    local dst      = p.dst
-    local src_slot = p.src_slot
-    local count    = p.count
-    local dst_slot = p.dst_slot
-
-    local src_inv = peripheral.wrap(src)
-    if count == nil then
-        return src_inv.pushItems(
-            dst, src_slot
+    local src = peripheral.wrap(p.src)
+    if p.count == nil then
+        return src.pushItems(
+            p.dst, p.src_slot
         )
-    elseif dst_slot == nil then
-        return src_inv.pushItems(
-            dst, src_slot, count
+    elseif p.dst_slot == nil then
+        return src.pushItems(
+            p.dst, p.src_slot, p.count
         )
     else
-        return src_inv.pushItems(
-            dst, src_slot, count, dst_slot
+        return src.pushItems(
+            p.dst, p.src_slot, p.count, p.dst_slot
         )
     end
 end
