@@ -152,19 +152,20 @@ function move_planner.move
     local plans = {}
     for _, src_id in ipairs(src_ids) do
         for src_slot, src_item in pairs(db:get_items(src_id)) do
+            local src_data = inv_data.new(src_id, src_slot, src_item)
             if (limit == nil or limit > 0) and
-            (item_name == nil or src_item.name == item_name) then
+            (item_name == nil or src_data.item.name == item_name) then
                 local topped = apply_top_ups(
                     plans, db, stacks,
-                    dst_ids, src_id, src_slot, src_item, limit
+                    dst_ids, src_data.id, src_data.slot, src_data.item, limit
                 )
                 if limit ~= nil then
                     limit = limit - topped
                 end
-                if src_item.count > 0 then
+                if src_data.item.count > 0 then
                     local moved = apply_move(
                         plans, db, stacks,
-                        dst_ids, src_id, src_slot, src_item, limit
+                        dst_ids, src_data.id, src_data.slot, src_data.item, limit
                     )
                     if limit ~= nil then
                         limit = limit - moved
