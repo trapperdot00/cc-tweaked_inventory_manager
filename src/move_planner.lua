@@ -1,6 +1,18 @@
 local tbl = require("utils.table_utils")
 local move_planner = {}
 
+local inv_data = {}
+inv_data.__index = inv_data
+
+function inv_data.new(inv_id, inv_slot, inv_item)
+    return setmetatable({
+            id   = inv_id,
+            slot = inv_slot,
+            item = inv_item
+        }, inv_data
+    )
+end
+
 local function get_empty_slots
 (db, inv_ids)
     -- INV_IDS = { SLOTS }
