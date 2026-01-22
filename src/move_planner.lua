@@ -58,28 +58,28 @@ local function get_nonfull_slots
     return nonfull_slots
 end
 
-local function get_top_up_plans(db, stacks, dst_ids, src_id, src_slot, src_item, limit)
+local function get_top_up_plans(db, stacks, dst_ids, limit, src_data)
     local plans = {}
-    for dst_id, dst_slots in pairs(get_nonfull_slots(db, stacks, dst_ids, src_item.name)) do
+    for dst_id, dst_slots in pairs(get_nonfull_slots(db, stacks, dst_ids, src_data.item.name)) do
         for _, dst_slot in ipairs(dst_slots) do
-            local cap = stacks:get(src_item.name) - db:get_item(dst_id, dst_slot).count
-            local cnt = math.min(src_item.count, cap)
+            local cap = stacks:get(src_data.item.name) - db:get_item(dst_id, dst_slot).count
+            local cnt = math.min(src_data.item.count, cap)
             if limit ~= nil then
                 cnt = math.min(cnt, limit)
             end
             if cnt > 0 then
                 table.insert(plans, {
-                    src      = src_id,
-                    src_slot = src_slot,
+                    src      = src_data.id,
+                    src_slot = src_data.slot,
                     dst      = dst_id,
                     dst_slot = dst_slot,
                     count    = cnt
                 })
-                src_item.count = src_item.count - cnt
+                src_data.item.count = src_data.item.count - cnt
                 if limit ~= nil then
                     limit = limit - cnt
                 end
-                if src_item.count == 0 then goto done end
+                if src_data.item.count == 0 then goto done end
             end
         end
     end
@@ -90,20 +90,20 @@ local function get_top_up_plans(db, stacks, dst_ids, src_id, src_slot, src_item,
     return plans
 end
 
-local function get_insert_plan(db, stacks, dst_ids, src_id, src_slot, src_item, limit)
-    for dst_id, dst_slots in pairs(get_empty_slots(db, dst_ids, src_item.name)) do
+local function get_insert_plan(db, stacks, dst_ids, limit, src_data)
+    for dst_id, dst_slots in pairs(get_empty_slots(db, dst_ids, src_data.item.name)) do
         for _, dst_slot in ipairs(dst_slots) do
             local cnt = math.min(
-                src_item.count, stacks:get(src_item.name)
+                src_data.item.count, stacks:get(src_data.item.name)
             )
             if limit ~= nil then
                 cnt = math.min(cnt, limit)
             end
             if cnt > 0 then
-                src_item.count = 0
+                src_data.item.count = 0
                 return {
-                    src      = src_id,
-                    src_slot = src_slot,
+                    src      = src_data.id,
+                    src_slot = src_data.slot,
                     dst      = dst_id,
                     dst_slot = dst_slot,
                     count    = cnt
@@ -113,16 +113,16 @@ local function get_insert_plan(db, stacks, dst_ids, src_id, src_slot, src_item, 
     end
 end
 
-local function apply_top_ups(plans, db, stacks, dst_ids, src_id, src_slot, src_item, limit)
+local function apply_top_ups(plans, db, stacks, dst_ids, limit, src_data)
     local moved = 0
     local top_ups = get_top_up_plans(
-        db, stacks, dst_ids, src_id, src_slot, src_item, limit
+        db, stacks, dst_ids, limit, src_data
     )
     if top_ups ~= nil then
         for _, plan in ipairs(top_ups) do
             local cnt = db:get_item(plan.dst, plan.dst_slot).count + plan.count
             db:add_item(plan.dst, plan.dst_slot, {
-                name  = src_item.name,
+                name  = src_data.item.name,
                 count = cnt
             })
             moved = moved + plan.count
@@ -132,13 +132,13 @@ local function apply_top_ups(plans, db, stacks, dst_ids, src_id, src_slot, src_i
     return moved
 end
 
-local function apply_move(plans, db, stacks, dst_ids, src_id, src_slot, src_item, limit)
+local function apply_move(plans, db, stacks, dst_ids, limit, src_data)
     local plan = get_insert_plan(
-        db, stacks, dst_ids, src_id, src_slot, src_item, limit
+        db, stacks, dst_ids, limit, src_data
     )
     if plan ~= nil then
         db:add_item(plan.dst, plan.dst_slot, {
-            name  = src_item.name,
+            name  = src_data.item.name,
             count = plan.count
         })
         table.insert(plans, plan)
@@ -156,16 +156,14 @@ function move_planner.move
             if (limit == nil or limit > 0) and
             (item_name == nil or src_data.item.name == item_name) then
                 local topped = apply_top_ups(
-                    plans, db, stacks,
-                    dst_ids, src_data.id, src_data.slot, src_data.item, limit
+                    plans, db, stacks, dst_ids, limit, src_data
                 )
                 if limit ~= nil then
                     limit = limit - topped
                 end
                 if src_data.item.count > 0 then
                     local moved = apply_move(
-                        plans, db, stacks,
-                        dst_ids, src_data.id, src_data.slot, src_data.item, limit
+                        plans, db, stacks, dst_ids, limit, src_data
                     )
                     if limit ~= nil then
                         limit = limit - moved
